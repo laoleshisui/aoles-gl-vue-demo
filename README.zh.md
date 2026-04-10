@@ -1,4 +1,5 @@
 <div align="center">
+  <img src="./public/favicon.ico" width="80" height="80" alt="Aoles GL logo" />
   <h1>Aoles GL — Vue Test</h1>
   <p><strong><a href="https://github.com/laoleshisui/aoles-gl-vue-open">aoles-gl-vue</a> 的集成示例项目 — 基于 Vue 3 + WebGL/OpenGL 的高性能 Web 视频编辑器组件库</strong></p>
   <p>
@@ -116,6 +117,12 @@ server: {
 ```
 
 这两个响应头是 `SharedArrayBuffer` 的必要条件，而 WASM 依赖它才能正常运行。
+
+## 💬 交流群
+
+<div align="center">
+  <img src="./public/image/cover/qq_group.png" width="200" alt="QQ 交流群" />
+</div>
 
 ## 🔗 相关项目
 

@@ -1,4 +1,5 @@
 <div align="center">
+  <img src="./public/favicon.ico" width="80" height="80" alt="Aoles GL logo" />
   <h1>Aoles GL — Vue Test</h1>
   <p><strong>Integration demo app for <a href="https://github.com/laoleshisui/aoles-gl-vue-open">aoles-gl-vue</a> — a high-performance web video editor component library</strong></p>
   <p>
@@ -116,6 +117,12 @@ server: {
 ```
 
 These headers are required for `SharedArrayBuffer`, which WASM relies on.
+
+## 💬 Community
+
+<div align="center">
+  <img src="./public/image/cover/qq_group.png" width="200" alt="QQ Group" />
+</div>
 
 ## 🔗 Related
 
