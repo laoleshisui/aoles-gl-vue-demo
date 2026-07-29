@@ -8,7 +8,7 @@ vec4 transition (vec2 uv) {
   float dist = length(dir);
   vec2 offset = dir * (sin(progress * dist * amplitude - progress * speed) + .5) / 30.;
   return mix(
-    getLastOutputColor(uv + offset),
+    getEffectColor(uv + offset),
     getFromColor(uv),
     smoothstep(0.2, 1.0, progress)
   );

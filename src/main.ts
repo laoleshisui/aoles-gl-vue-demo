@@ -25,6 +25,7 @@ const i18n = createI18n({
 // 合并组件库的语言包
 setupAolesI18n(i18n)
 
+
 // 创建路由
 const router = createRouter({
   history: createWebHistory(),
@@ -56,6 +57,7 @@ pageStore.wasmConfig = {
   wasmPath: '/src/wasm/GLController.wasm?url',
 }
 
+pageStore.i18nInstance = i18n;
 pageStore.generateCallback = GLControllerExport
 
 app.mount('#app')

@@ -11,6 +11,6 @@ vec4 transition(vec2 uv) {
   float modPos = mod(circPos, 3.1415 / 4.);
   float signed = sign(progress - modPos);
   
-  return mix(getFromColor(p), getLastOutputColor(p), step(signed, 0.5));
+  return mix(getFromColor(p), getEffectColor(p), step(signed, 0.5));
   
 }

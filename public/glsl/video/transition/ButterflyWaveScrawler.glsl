@@ -20,9 +20,9 @@ vec4 transition(vec2 uv) {
   float disp = compute(p, progress, vec2(0.5, 0.5)) ;
   vec4 texTo = getFromColor(p + inv*disp);
   vec4 texFrom = vec4(
-  getLastOutputColor(p + progress*disp*(1.0 - colorSeparation)).r,
-  getLastOutputColor(p + progress*disp).g,
-  getLastOutputColor(p + progress*disp*(1.0 + colorSeparation)).b,
+  getEffectColor(p + progress*disp*(1.0 - colorSeparation)).r,
+  getEffectColor(p + progress*disp).g,
+  getEffectColor(p + progress*disp*(1.0 + colorSeparation)).b,
   1.0);
   return texTo*progress + texFrom*inv;
 }

@@ -37,6 +37,6 @@ vec4 transition(vec2 uv) {
   if(onEnd || Rand(floor(crp))>.5) {
     return getFromColor(mrp);
   } else {
-    return getLastOutputColor(mrp);
+    return getEffectColor(mrp);
   }
 }

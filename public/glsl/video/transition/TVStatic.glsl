@@ -16,7 +16,7 @@ highp float noise(vec2 co)
 
 vec4 transition(vec2 p) {
   if (progress < offset) {
-    return getLastOutputColor(p);
+    return getEffectColor(p);
   } else if (progress > (1.0 - offset)) {
     return getFromColor(p);
   } else {

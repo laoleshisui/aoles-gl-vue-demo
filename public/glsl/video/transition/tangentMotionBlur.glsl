@@ -18,7 +18,7 @@ vec4 motionBlurFrom(vec2 _st, vec2 speed) {
         float weight = 4.0 * (percent - percent * percent);
         vec2 newuv = texCoord + speed * percent;
         newuv = fract(newuv);
-        color += getLastOutputColor(newuv).rgb * weight;
+        color += getEffectColor(newuv).rgb * weight;
         total += weight;
     }
     return vec4(color / total, 1.0);

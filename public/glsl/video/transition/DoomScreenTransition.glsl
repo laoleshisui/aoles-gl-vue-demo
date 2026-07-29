@@ -48,7 +48,7 @@ vec4 transition(vec2 uv) {
   vec4 c;
   if (phase + posY < 1.0) {
     p = vec2(uv.x, uv.y + mix(0.0, vec2(1.0).y, phase)) / vec2(1.0).xy;
-    c = getLastOutputColor(p);
+    c = getEffectColor(p);
   } else {
     p = uv.xy / vec2(1.0).xy;
     c = getFromColor(p);

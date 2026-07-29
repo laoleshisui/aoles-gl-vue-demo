@@ -8,9 +8,9 @@ vec4 transition(vec2 p) {
   float dist = length(dir);
 
   if (dist > progress) {
-    return mix(getLastOutputColor( p), getFromColor( p), progress);
+    return mix(getEffectColor( p), getFromColor( p), progress);
   } else {
     vec2 offset = dir * sin(dist * amplitude - progress * speed);
-    return mix(getLastOutputColor( p + offset), getFromColor( p), progress);
+    return mix(getEffectColor( p + offset), getFromColor( p), progress);
   }
 }

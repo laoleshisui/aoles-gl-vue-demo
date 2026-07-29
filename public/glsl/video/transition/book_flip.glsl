@@ -19,8 +19,8 @@ vec4 transition (vec2 p) {
   float pr = step(1.0 - progress, p.x);
 
   if (p.x < 0.5) {
-    return mix(getLastOutputColor(p), getFromColor(skewLeft(p)) * addShade(), pr);
+    return mix(getEffectColor(p), getFromColor(skewLeft(p)) * addShade(), pr);
   } else {
-    return mix(getLastOutputColor(skewRight(p)) * addShade(), getFromColor(p),   pr);
+    return mix(getEffectColor(skewRight(p)) * addShade(), getFromColor(p),   pr);
   }
 }

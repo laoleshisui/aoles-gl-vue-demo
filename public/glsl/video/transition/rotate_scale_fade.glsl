@@ -28,5 +28,5 @@ vec4 transition (vec2 uv) {
       rotatedUv.y < 0.0 || rotatedUv.y > 1.0)
     return backColor;
     
-  return mix(getLastOutputColor(rotatedUv), getFromColor(rotatedUv), progress);
+  return mix(getEffectColor(rotatedUv), getFromColor(rotatedUv), progress);
 }

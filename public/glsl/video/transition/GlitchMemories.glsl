@@ -10,6 +10,6 @@ vec4 transition(vec2 p) {
   vec2 green = p + dist * .3;
   vec2 blue = p + dist * .5;
 
-  return vec4(mix(getLastOutputColor(red), getFromColor(red), progress).r,mix(getLastOutputColor(green), getFromColor(green), progress).g,mix(getLastOutputColor(blue), getFromColor(blue), progress).b,1.0);
+  return vec4(mix(getEffectColor(red), getFromColor(red), progress).r,mix(getEffectColor(green), getFromColor(green), progress).g,mix(getEffectColor(blue), getFromColor(blue), progress).b,1.0);
 }
 

@@ -39,7 +39,7 @@ vec4 transition (vec2 p) {
   float size = mix(1.0, depth, 1.-progress);
   pto = (p + vec2(-0.5, -0.5)) * vec2(size, size) + vec2(0.5, 0.5);
   if (inBounds(pfr)) {
-    return getLastOutputColor(pfr);
+    return getEffectColor(pfr);
   }
   else if (inBounds(pto)) {
     return getFromColor(pto);

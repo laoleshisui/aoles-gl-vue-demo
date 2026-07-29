@@ -21,7 +21,7 @@ vec4 bgColor (vec2 p, vec2 pfr, vec2 pto) {
   vec4 c = black;
   pfr = project(pfr);
   if (inBounds(pfr)) {
-    c += mix(black, getLastOutputColor(pfr), reflection * mix(1.0, 0.0, pfr.y));
+    c += mix(black, getEffectColor(pfr), reflection * mix(1.0, 0.0, pfr.y));
   }
   pto = project(pto);
   if (inBounds(pto)) {
@@ -43,7 +43,7 @@ vec4 transition(vec2 p) {
 
   if (progress < 0.5) {
     if (inBounds(pfr)) {
-      return getLastOutputColor(pfr);
+      return getEffectColor(pfr);
     }
     if (inBounds(pto)) {
       return getFromColor(pto);
@@ -53,7 +53,7 @@ vec4 transition(vec2 p) {
     return getFromColor(pto);
   }
   if (inBounds(pfr)) {
-    return getLastOutputColor(pfr);
+    return getEffectColor(pfr);
   }
   return bgColor(p, pfr, pto);
 }

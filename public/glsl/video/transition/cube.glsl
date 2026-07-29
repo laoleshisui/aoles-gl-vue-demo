@@ -18,7 +18,7 @@ vec4 bgColor (vec2 p, vec2 pfr, vec2 pto) {
   pfr = project(pfr);
   // FIXME avoid branching might help perf!
   if (inBounds(pfr)) {
-    c += mix(vec4(0.0), getLastOutputColor(pfr), reflection * mix(1.0, 0.0, pfr.y));
+    c += mix(vec4(0.0), getEffectColor(pfr), reflection * mix(1.0, 0.0, pfr.y));
   }
   pto = project(pto);
   if (inBounds(pto)) {
@@ -57,7 +57,7 @@ vec4 transition(vec2 op) {
   );
   // FIXME avoid branching might help perf!
   if (inBounds(fromP)) {
-    return getLastOutputColor(fromP);
+    return getEffectColor(fromP);
   }
   else if (inBounds(toP)) {
     return getFromColor(toP);

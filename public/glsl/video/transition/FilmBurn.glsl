@@ -25,7 +25,7 @@ float smooth_random(vec2 co, float shft) {
 	return smooth_mix(smooth_mix(random(floor(co),shft),random(floor(co+vec2(1.,0.)),shft),fract(co.x)),smooth_mix(random(floor(co+vec2(0.,1.)),shft),random(floor(co+vec2(1.,1.)),shft),fract(co.x)),fract(co.y));
 }
 vec4 texture(vec2 p) {
-    return mix(getLastOutputColor(p), getFromColor(p), sigmoid(progress,10.));
+    return mix(getEffectColor(p), getFromColor(p), sigmoid(progress,10.));
 }
 #define pi 3.14159265358979323
 #define clamps(x) clamp(x,0.,1.)

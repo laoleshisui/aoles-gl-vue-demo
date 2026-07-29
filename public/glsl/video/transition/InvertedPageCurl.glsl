@@ -36,16 +36,11 @@ in vec2 texCoord;
 
 const float MIN_AMOUNT = -0.16;
 const float MAX_AMOUNT = 1.5;
-float amount = progress * (MAX_AMOUNT - MIN_AMOUNT) + MIN_AMOUNT;
 
 const float PI = 3.141592653589793;
 
 const float scale = 512.0;
 const float sharpness = 3.0;
-
-float cylinderCenter = amount;
-// 360 degrees * amount
-float cylinderAngle = 2.0 * PI * amount;
 
 const float cylinderRadius = 1.0 / PI / 2.0;
 
@@ -77,7 +72,7 @@ float distanceToEdge(vec3 point)
         return min(dx, dy);
 }
 
-vec4 seeThrough(float yc, vec2 p, mat3 rotation, mat3 rrotation)
+vec4 seeThrough(float yc, vec2 p, mat3 rotation, mat3 rrotation, float cylinderAngle, float cylinderCenter)
 {
         float hitAngle = PI - (acos(yc / cylinderRadius) - cylinderAngle);
         vec3 point = hitPoint(hitAngle, yc, rotation * vec3(p, 1.0), rrotation);
@@ -86,22 +81,22 @@ vec4 seeThrough(float yc, vec2 p, mat3 rotation, mat3 rrotation)
             return getFromColor(p);
         }
 
-        if (yc > 0.0) return getLastOutputColor(p);
+        if (yc > 0.0) return getEffectColor(p);
 
-        vec4 color = getLastOutputColor(point.xy);
+        vec4 color = getEffectColor(point.xy);
         vec4 tcolor = vec4(0.0);
 
         return antiAlias(color, tcolor, distanceToEdge(point));
 }
 
-vec4 seeThroughWithShadow(float yc, vec2 p, vec3 point, mat3 rotation, mat3 rrotation)
+vec4 seeThroughWithShadow(float yc, vec2 p, vec3 point, mat3 rotation, mat3 rrotation, float cylinderAngle, float cylinderCenter, float amount)
 {
         float shadow = distanceToEdge(point) * 30.0;
         shadow = (1.0 - shadow) / 3.0;
 
         if (shadow < 0.0) shadow = 0.0; else shadow *= amount;
 
-        vec4 shadowColor = seeThrough(yc, p, rotation, rrotation);
+        vec4 shadowColor = seeThrough(yc, p, rotation, rrotation, cylinderAngle, cylinderCenter);
         shadowColor.r -= shadow;
         shadowColor.g -= shadow;
         shadowColor.b -= shadow;
@@ -111,14 +106,14 @@ vec4 seeThroughWithShadow(float yc, vec2 p, vec3 point, mat3 rotation, mat3 rrot
 
 vec4 backside(float yc, vec3 point)
 {
-        vec4 color = getLastOutputColor(point.xy);
+        vec4 color = getEffectColor(point.xy);
         float gray = (color.r + color.b + color.g) / 15.0;
         gray += (8.0 / 10.0) * (pow(1.0 - abs(yc / cylinderRadius), 2.0 / 10.0) / 2.0 + (5.0 / 10.0));
         color.rgb = vec3(gray);
         return color;
 }
 
-vec4 behindSurface(vec2 p, float yc, vec3 point, mat3 rrotation)
+vec4 behindSurface(vec2 p, float yc, vec3 point, mat3 rrotation, float cylinderAngle, float cylinderCenter, float amount)
 {
         float shado = (1.0 - ((-cylinderRadius - yc) / amount * 7.0)) / 6.0;
         shado *= 1.0 - abs(point.x - 0.5);
@@ -142,73 +137,69 @@ vec4 behindSurface(vec2 p, float yc, vec3 point, mat3 rrotation)
 }
 
 vec4 transition(vec2 p) {
+    // 在函数内部初始化 amount
+    float amount = progress * (MAX_AMOUNT - MIN_AMOUNT) + MIN_AMOUNT;
+    
+    const float angle = 100.0 * PI / 180.0;
+    float cylinderCenter = amount;
+    float cylinderAngle = 2.0 * PI * amount;
+    
+    float c = cos(-angle);
+    float s = sin(-angle);
 
-  const float angle = 100.0 * PI / 180.0;
-        float c = cos(-angle);
-        float s = sin(-angle);
+    mat3 rotation = mat3( c, s, 0,
+                          -s, c, 0,
+                          -0.801, 0.8900, 1
+                        );
+    c = cos(angle);
+    s = sin(angle);
 
-        mat3 rotation = mat3( c, s, 0,
-                                                                -s, c, 0,
-                                                                -0.801, 0.8900, 1
-                                                                );
-        c = cos(angle);
-        s = sin(angle);
+    mat3 rrotation = mat3( c, s, 0,
+                           -s, c, 0,
+                           0.98500, 0.985, 1
+                         );
 
-        mat3 rrotation = mat3(	c, s, 0,
-                                                                        -s, c, 0,
-                                                                        0.98500, 0.985, 1
-                                                                );
+    vec3 point = rotation * vec3(p, 1.0);
+    float yc = point.y - cylinderCenter;
 
-        vec3 point = rotation * vec3(p, 1.0);
+    if (yc < -cylinderRadius) {
+        // Behind surface
+        return behindSurface(p, yc, point, rrotation, cylinderAngle, cylinderCenter, amount);
+    }
 
-        float yc = point.y - cylinderCenter;
+    if (yc > cylinderRadius) {
+        // Flat surface
+        return getEffectColor(p);
+    }
 
-        if (yc < -cylinderRadius)
-        {
-                // Behind surface
-                return behindSurface(p,yc, point, rrotation);
-        }
+    float hitAngle = (acos(yc / cylinderRadius) + cylinderAngle) - PI;
+    float hitAngleMod = mod(hitAngle, 2.0 * PI);
+    
+    if ((hitAngleMod > PI && amount < 0.5) || (hitAngleMod > PI/2.0 && amount < 0.0)) {
+        return seeThrough(yc, p, rotation, rrotation, cylinderAngle, cylinderCenter);
+    }
 
-        if (yc > cylinderRadius)
-        {
-                // Flat surface
-                return getLastOutputColor(p);
-        }
+    point = hitPoint(hitAngle, yc, point, rrotation);
 
-        float hitAngle = (acos(yc / cylinderRadius) + cylinderAngle) - PI;
+    if (point.x < 0.0 || point.y < 0.0 || point.x > 1.0 || point.y > 1.0) {
+        return seeThroughWithShadow(yc, p, point, rotation, rrotation, cylinderAngle, cylinderCenter, amount);
+    }
 
-        float hitAngleMod = mod(hitAngle, 2.0 * PI);
-        if ((hitAngleMod > PI && amount < 0.5) || (hitAngleMod > PI/2.0 && amount < 0.0))
-        {
-                return seeThrough(yc, p, rotation, rrotation);
-        }
+    vec4 color = backside(yc, point);
+    vec4 otherColor;
+    
+    if (yc < 0.0) {
+        float shado = 1.0 - (sqrt(pow(point.x - 0.5, 2.0) + pow(point.y - 0.5, 2.0)) / 0.71);
+        shado *= pow(-yc / cylinderRadius, 3.0);
+        shado *= 0.5;
+        otherColor = vec4(0.0, 0.0, 0.0, shado);
+    } else {
+        otherColor = getEffectColor(p);
+    }
 
-        point = hitPoint(hitAngle, yc, point, rrotation);
+    color = antiAlias(color, otherColor, cylinderRadius - abs(yc));
+    vec4 cl = seeThroughWithShadow(yc, p, point, rotation, rrotation, cylinderAngle, cylinderCenter, amount);
+    float dist = distanceToEdge(point);
 
-        if (point.x < 0.0 || point.y < 0.0 || point.x > 1.0 || point.y > 1.0)
-        {
-                return seeThroughWithShadow(yc, p, point, rotation, rrotation);
-        }
-
-        vec4 color = backside(yc, point);
-
-        vec4 otherColor;
-        if (yc < 0.0)
-        {
-                float shado = 1.0 - (sqrt(pow(point.x - 0.5, 2.0) + pow(point.y - 0.5, 2.0)) / 0.71);
-                shado *= pow(-yc / cylinderRadius, 3.0);
-                shado *= 0.5;
-                otherColor = vec4(0.0, 0.0, 0.0, shado);
-        }
-        else
-        {
-                otherColor = getLastOutputColor(p);
-        }
-
-        color = antiAlias(color, otherColor, cylinderRadius - abs(yc));
-
-        vec4 cl = seeThroughWithShadow(yc, p, point, rotation, rrotation);
-        float dist = distanceToEdge(point);
-
-        return antiAlias(color, cl, dist);
+    return antiAlias(color, cl, dist);
 }

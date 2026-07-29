@@ -60,12 +60,12 @@ float ease2(float t) {
 
 vec4 transition(vec2 uv) {
   vec2 p = uv.xy / vec2(1.0).xy;
-  vec4 color1 = getLastOutputColor(p);
+  vec4 color1 = getEffectColor(p);
   vec4 color2 = getFromColor(p);
   vec2 disp = displace(color1, p, 0.33, 0.7, 1.0-ease1(progress));
   vec2 disp2 = displace(color2, p, 0.33, 0.5, ease2(progress));
   vec4 dColor1 = getFromColor(disp);
-  vec4 dColor2 = getLastOutputColor(disp2);
+  vec4 dColor2 = getEffectColor(disp2);
   float val = ease1(progress);
   vec3 gray = vec3(dot(min(dColor2, dColor1).rgb, vec3(0.299, 0.587, 0.114)));
   dColor2 = vec4(gray, 1.0);

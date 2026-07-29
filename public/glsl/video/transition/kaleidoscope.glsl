@@ -17,6 +17,6 @@ vec4 transition(vec2 uv) {
   }
   abs(mod(p, 1.0));
   return mix(
-    mix(getLastOutputColor(q), getFromColor(q), progress),
-    mix(getLastOutputColor(p), getFromColor(p), progress), 1.0 - 2.0*abs(progress - 0.5));
+    mix(getEffectColor(q), getFromColor(q), progress),
+    mix(getEffectColor(p), getFromColor(p), progress), 1.0 - 2.0*abs(progress - 0.5));
 }
