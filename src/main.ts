@@ -9,7 +9,14 @@ import 'element-plus/dist/index.css'
 import 'aoles-gl-vue/style.css'
 
 // 引入组件库
-import AolesGLVue, { setupAolesI18n, configAssetPath, initWasm } from 'aoles-gl-vue'
+import AolesGLVue, {
+  setupAolesI18n,
+  configAssetPath,
+  Engine,
+  provideEngine,
+  initFonts,
+  initEffects,
+} from 'aoles-gl-vue'
 
 import App from './App.vue'
 
@@ -23,7 +30,6 @@ const i18n = createI18n({
 
 // 合并组件库的语言包
 setupAolesI18n(i18n)
-
 
 // 创建路由
 const router = createRouter({
@@ -49,10 +55,18 @@ configAssetPath({
   basePath: import.meta.env.VITE_ASSERT_BASEPATH || '/'
 })
 
-// 配置 WASM 路径（必须在 mount 之前，否则组件 onMounted 读不到）
-initWasm({
+// 创建 Engine 实例并配置 WASM 路径
+const engine = new Engine()
+engine.configure({
   jsPath: '/src/wasm/GLController.mjs?url',
   wasmPath: '/src/wasm/GLController.wasm?url',
 })
+
+// 初始化字体和特效
+initFonts(engine)
+initEffects(engine)
+
+// 注入 Engine（必须在 mount 之前）
+provideEngine(engine, app)
 
 app.mount('#app')

@@ -5,35 +5,29 @@
  */
 
 import { registerFont, registerTransition } from 'aoles-gl-vue'
+import type { Engine } from 'aoles-gl-vue'
 
 /**
- * 注册自定义字体示例
+ * 注册自定义字体示例（不需要 engine，只是往列表里加）
  */
 export function setupCustomFonts() {
-  // 注册单个自定义字体
   registerFont({
     value: 'Roboto',
     label: 'FontMap.Label.Roboto',
-    data: {
-      path: '/fonts/Roboto-Regular.ttf'
-    }
+    data: { path: '/fonts/Roboto-Regular.ttf' }
   })
 
-  // 注册更多字体
   registerFont({
     value: 'OpenSans',
     label: 'FontMap.Label.OpenSans',
-    data: {
-      path: '/fonts/OpenSans-Regular.ttf'
-    }
+    data: { path: '/fonts/OpenSans-Regular.ttf' }
   })
 }
 
 /**
- * 注册自定义转场特效示例
+ * 注册自定义转场特效示例（需要 engine，WASM 已初始化时立即加载 shader）
  */
-export function setupCustomTransitions() {
-  // 注册简单的转场特效
+export function setupCustomTransitions(engine: Engine) {
   registerTransition({
     value: 'CustomFade',
     label: 'TransitionMap.Label.CustomFade',
@@ -44,9 +38,8 @@ export function setupCustomTransitions() {
       path: '/glsl/video/transition/custom_fade.glsl',
       uniforms: []
     }
-  })
+  }, engine)
 
-  // 注册带参数的转场特效
   registerTransition({
     value: 'CustomBlur',
     label: 'TransitionMap.Label.CustomBlur',
@@ -68,17 +61,5 @@ export function setupCustomTransitions() {
         }
       ]
     }
-  })
+  }, engine)
 }
-
-/**
- * 如果需要在 main.ts 中使用，取消下面的注释：
- *
- * // main.ts
- * import { setupCustomFonts, setupCustomTransitions } from './customAssets'
- *
- * // 在 configAssetPath 之后调用
- * configAssetPath({ basePath: '...' })
- * setupCustomFonts()
- * setupCustomTransitions()
- */
