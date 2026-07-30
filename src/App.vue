@@ -1,19 +1,14 @@
 <template>
   <div class="editor-root">
-    <!-- Header -->
+    <!-- Header：应用层自行实现，不再由库提供 -->
     <div class="card-style header-section">
-      <HeaderContainer />
+      <div class="app-header">
+        <span class="app-title">Editor</span>
+      </div>
     </div>
 
     <div class="main-content">
-      <!-- 左侧资源面板 -->
-      <div class="resources-section">
-        <div class="card-style full-size">
-          <ResourcesContainer style="width: 100%" />
-        </div>
-      </div>
-
-      <!-- 右侧主区域 -->
+      <!-- 右侧主区域（原 ResourcesContainer 暂由应用层接管，此处先留空占位） -->
       <div class="right-section">
         <!-- 上：预览 + 属性 -->
         <div class="preview-attr-row">
@@ -39,8 +34,6 @@
 
 <script setup lang="ts">
 import {
-  HeaderContainer,
-  ResourcesContainer,
   ControllerPreview,
   AttributeContainer,
   TrackContainer,

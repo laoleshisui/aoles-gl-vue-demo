@@ -9,10 +9,9 @@ import 'element-plus/dist/index.css'
 import 'aoles-gl-vue/style.css'
 
 // 引入组件库
-import AolesGLVue, { setupAolesI18n, usePageState, configAssetPath } from 'aoles-gl-vue'
+import AolesGLVue, { setupAolesI18n, configAssetPath, initWasm } from 'aoles-gl-vue'
 
 import App from './App.vue'
-import { GLControllerExport } from './glcontroller'
 
 // 创建 i18n
 const i18n = createI18n({
@@ -51,13 +50,9 @@ configAssetPath({
 })
 
 // 配置 WASM 路径（必须在 mount 之前，否则组件 onMounted 读不到）
-const pageStore = usePageState()
-pageStore.wasmConfig = {
+initWasm({
   jsPath: '/src/wasm/GLController.mjs?url',
   wasmPath: '/src/wasm/GLController.wasm?url',
-}
-
-pageStore.i18nInstance = i18n;
-pageStore.generateCallback = GLControllerExport
+})
 
 app.mount('#app')
