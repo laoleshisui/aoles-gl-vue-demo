@@ -11,10 +11,8 @@ import 'aoles-gl-vue/style.css'
 // 引入组件库
 import AolesGLVue, {
   setupAolesI18n,
-  configAssetPath,
   Engine,
   provideEngine,
-  initFonts,
   initEffects,
 } from 'aoles-gl-vue'
 
@@ -49,21 +47,18 @@ app.use(i18n)
 app.use(ElementPlus)
 app.use(AolesGLVue)
 
-// 配置资源路径（字体、GLSL shader 等静态资源）
-console.log("import.meta.env.VITE_ASSERT_BASEPATH: ", import.meta.env.VITE_ASSERT_BASEPATH)
-configAssetPath({
-  basePath: import.meta.env.VITE_ASSERT_BASEPATH || '/'
-})
-
 // 创建 Engine 实例并配置 WASM 路径
+console.log("import.meta.env.VITE_ASSERT_BASEPATH: ", import.meta.env.VITE_ASSERT_BASEPATH)
 const engine = new Engine()
 engine.configure({
   jsPath: '/src/wasm/GLController.mjs?url',
   wasmPath: '/src/wasm/GLController.wasm?url',
 })
+engine.configAssetPath({
+  basePath: import.meta.env.VITE_ASSERT_BASEPATH || '/'
+})
 
-// 初始化字体和特效
-initFonts(engine)
+// 初始化特效
 initEffects(engine)
 
 // 注入 Engine（必须在 mount 之前）
