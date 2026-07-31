@@ -8,7 +8,12 @@
     </div>
 
     <div class="main-content">
-      <!-- 右侧主区域（原 ResourcesContainer 暂由应用层接管，此处先留空占位） -->
+      <!-- 左侧资源面板 -->
+      <div class="card-style resources-section">
+        <ResourcePanel />
+      </div>
+
+      <!-- 右侧主区域 -->
       <div class="right-section">
         <!-- 上：预览 + 属性 -->
         <div class="preview-attr-row">
@@ -39,6 +44,7 @@ import {
   TrackContainer,
   GlobalConfigDialog,
 } from '@aoles-gl/vue'
+import ResourcePanel from './components/ResourcePanel.vue'
 </script>
 
 <style>
@@ -95,8 +101,7 @@ html, body {
 .resources-section {
   display: flex;
   overflow: hidden;
-  padding-top: 4px;
-  min-width: 0;
+  width: 200px;
   flex-shrink: 0;
 }
 
