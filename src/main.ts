@@ -6,7 +6,7 @@ import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 
 // 引入组件库的样式
-import 'aoles-gl-vue/style.css'
+import '@aoles-gl/vue/style.css'
 
 // 引入组件库
 import AolesGLVue, {
@@ -14,7 +14,7 @@ import AolesGLVue, {
   Engine,
   provideEngine,
   initEffects,
-} from 'aoles-gl-vue'
+} from '@aoles-gl/vue'
 
 import App from './App.vue'
 

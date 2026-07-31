@@ -4,8 +4,8 @@
  * 这个文件展示了如何在测试项目中注册自定义字体和转场特效
  */
 
-import { registerFont, registerTransition } from 'aoles-gl-vue'
-import type { Engine } from 'aoles-gl-vue'
+import { registerFont, registerTransition } from '@aoles-gl/vue'
+import type { Engine } from '@aoles-gl/vue'
 
 /**
  * 注册自定义字体示例（不需要 engine，只是往列表里加）

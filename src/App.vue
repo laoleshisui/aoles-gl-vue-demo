@@ -38,7 +38,7 @@ import {
   AttributeContainer,
   TrackContainer,
   GlobalConfigDialog,
-} from 'aoles-gl-vue'
+} from '@aoles-gl/vue'
 </script>
 
 <style>

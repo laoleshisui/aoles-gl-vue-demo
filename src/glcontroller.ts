@@ -1,4 +1,4 @@
-import { uniSourceMap, processPaths, extractFileExtension } from 'aoles-gl-vue'
+import { uniSourceMap, processPaths, extractFileExtension } from '@aoles-gl/vue'
 import { uploadFileToOSS } from './oss';
 import axios from 'axios';
 
