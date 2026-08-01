@@ -4,6 +4,7 @@
     <div class="card-style header-section">
       <div class="app-header">
         <span class="app-title">Editor</span>
+        <button class="add-text-btn" @click="addCustomText">+ 添加文字</button>
       </div>
     </div>
 
@@ -43,8 +44,29 @@ import {
   AttributeContainer,
   TrackContainer,
   GlobalConfigDialog,
+  useEngine,
+  usePreviewState,
+  createTrackPipeline,
 } from '@aoles-gl/vue'
 import ResourcePanel from './components/ResourcePanel.vue'
+
+const engine = useEngine()
+const previewState = usePreviewState(engine)
+const pipeline = createTrackPipeline(engine)
+
+async function addCustomText() {
+  await pipeline.addResource(
+    {
+      name: '请输入文字',   // name 才是引擎实际渲染的文字内容，content 无效
+      fontSize: 25,
+      fontFamily: 'NotoSansSC',
+      type: 'text',
+    },
+    { startTime: Number(previewState.currentTS) + 1 }
+  )
+  // 强制刷新一帧，否则暂停状态下不会重新渲染
+  await pipeline.renderCurrentFrame()
+}
 </script>
 
 <style>
@@ -89,6 +111,52 @@ html, body {
 .header-section {
   margin-bottom: 16px;
 }
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.dark .app-title {
+  color: #f9fafb;
+}
+
+.add-text-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.add-text-btn:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.dark .add-text-btn {
+  border-color: rgba(139, 92, 246, 0.4);
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+}
+
+.dark .add-text-btn:hover {
+  background: rgba(139, 92, 246, 0.25);
+  border-color: rgba(139, 92, 246, 0.6);
+}
+
 
 .main-content {
   display: flex;

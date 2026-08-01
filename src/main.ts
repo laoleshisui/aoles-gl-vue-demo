@@ -48,14 +48,43 @@ app.use(ElementPlus)
 app.use(AolesGLVue)
 
 // 创建 Engine 实例并配置 WASM 路径
-console.log("import.meta.env.VITE_ASSERT_BASEPATH: ", import.meta.env.VITE_ASSERT_BASEPATH)
+import controllerJs from '/src/wasm/GLController.mjs?url'
+import controllerWasm from '/src/wasm/GLController.wasm?url'
 const engine = new Engine()
-engine.configure({
-  jsPath: '/src/wasm/GLController.mjs?url',
-  wasmPath: '/src/wasm/GLController.wasm?url',
-})
+engine.configure({ jsPath: controllerJs, wasmPath: controllerWasm })
 engine.configAssetPath({
   basePath: import.meta.env.VITE_ASSERT_BASEPATH || '/'
+})
+
+// WASM 就绪后预加载字体和 shader 到 WASM 文件系统（文字渲染必须）
+const ASSET_PRELOAD_LIST = [
+  '/fonts/NotoSansSC-Regular.ttf',
+  '/glsl/text/position_text.glsl',
+  '/glsl/video/position.glsl',
+  '/glsl/video/effect/hflip.glsl',
+]
+
+engine.onWasmReady(async () => {
+  const base = (import.meta.env.VITE_ASSERT_BASEPATH || '').replace(/\/$/, '')
+  for (const assetPath of ASSET_PRELOAD_LIST) {
+    try {
+      const res = await fetch(base + assetPath)
+      if (!res.ok) { console.warn(`[aoles-gl] 加载失败: ${assetPath}`); continue }
+      const buf = new Uint8Array(await res.arrayBuffer())
+      // 确保目录存在
+      const fs = (engine as any).controllerWasmLoader.module['GLController'].FS
+      const parts = assetPath.split('/').filter(Boolean)
+      parts.pop()
+      let dir = ''
+      for (const part of parts) {
+        dir += `/${part}`
+        try { fs.mkdir(dir) } catch {}
+      }
+      fs.writeFile(assetPath, buf)
+    } catch (e) {
+      console.warn(`[aoles-gl] 预加载失败: ${assetPath}`, e)
+    }
+  }
 })
 
 // 初始化特效

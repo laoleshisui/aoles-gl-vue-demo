@@ -1,15 +1,17 @@
-import { uniSourceMap, processPaths, extractFileExtension } from '@aoles-gl/vue'
+import { processPaths, extractFileExtension } from '@aoles-gl/vue'
+import type { Engine } from '@aoles-gl/vue'
 import { uploadFileToOSS } from './oss';
 import axios from 'axios';
 
-export async function GLControllerExport (controllerJson) {
+export async function GLControllerExport (controllerJson, engine: Engine) {
+  const uniSourceMap = engine.uniSourceMap;
   console.log('视频配置:', controllerJson, uniSourceMap);
-  
+
   await processPaths(controllerJson, ['path', 'font_path', 'glsl_path'], async (path:string, parent)=>{
     console.log("parent: ", parent);
     for (let i = uniSourceMap.length - 1; i >= 0; i--) {
         if (uniSourceMap[i].wasmPath === path) {
-          const url = await uploadFileToOSS(uniSourceMap[i].file);
+          const url = await uploadFileToOSS((uniSourceMap[i] as any).file);
           return url;
         }
       }

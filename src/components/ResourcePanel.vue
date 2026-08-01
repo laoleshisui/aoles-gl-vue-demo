@@ -156,19 +156,40 @@ async function addToTrack(item: ResourceItem) {
   if (item.loading) return
   item.loading = true
   const blobUrl = URL.createObjectURL(item.file)
-  try {
-    // 以当前播放头位置作为片段起始帧（与参考实现一致）
-    const startTime = Number(previewState.currentTS) + 1
 
-    // addUrlsToTrack 内部已经处理了视频音频分离
-    // 当添加视频文件时，会自动提取音频并创建独立的音频轨道
-    await pipeline.addUrlsToTrack(
-      {
-        type: currentTab.value.materialType,
-        urls: [{ url: blobUrl, file: item.file }],
-      },
-      { startTime }
-    )
+  // 业务层：注册 wasmPath → url 映射，让 wasmCallbacks 能找到原始 URL
+  engine.uniSourceMap.push({
+    url: blobUrl,
+    wasmPath: `/${item.file.name}`,
+  } as any)
+
+  // resFile 是 pipeline 低层方法期望的结构
+  const resFile = {
+    url: blobUrl,
+    file: item.file,
+    material: { id: item.id },
+    iurl: { id: 0, url: blobUrl },
+    options: { startTime: Number(previewState.currentTS) + 1 },
+  }
+
+  try {
+    const type = currentTab.value.type
+
+    if (type === 'video' || type === 'image') {
+      // 1. 先加视频轨道
+      const videoResource = await pipeline.addVideoClipWithFile(resFile)
+      // 2. 视频文件同时提取音频（图片不含音频流，跳过）
+      if (!item.file.type.startsWith('image/')) {
+        await pipeline.addAudioClipWithFile({ ...resFile, videoResource })
+      }
+    } else if (type === 'audio') {
+      await pipeline.addAudioClipWithFile(resFile)
+    } else if (type === 'subtitle') {
+      await pipeline.addTextClipWithFile(resFile)
+    } else if (type === 'font') {
+      await pipeline.loadFontUrl(blobUrl, item.file)
+    }
+
     ElMessage.success(`已添加到轨道：${item.file.name}`)
   } catch (err) {
     console.error('[ResourcePanel] addToTrack failed:', err)

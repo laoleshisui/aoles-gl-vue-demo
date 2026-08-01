@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aoles-gl/core": "file:../aoles-gl-web-package/packages/core",
+    "@aoles-gl/vue": "file:../aoles-gl-web-package/packages/vue",
     "@ckpack/vue-color": "^1.4.1",
     "@ctrl/tinycolor": "^4.2.0",
     "@element-plus/icons-vue": "^2.0.10",
