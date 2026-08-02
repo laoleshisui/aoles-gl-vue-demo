@@ -51,9 +51,8 @@ app.use(ElementPlus)
 app.use(AolesGLVue)
 
 // 创建 Engine 实例并配置 WASM 路径
-const engine = new Engine()
+const engine = new Engine(undefined, undefined, { width: 1920, height: 1080, fps: 30 })
 engine.configure({ jsPath: controllerJs, wasmPath: controllerWasm })
-engine.initialVideoConfig = { width: 1920, height: 1080, fps: 30 }
 engine.configAssetPath({
   basePath: import.meta.env.VITE_ASSERT_BASEPATH || '/'
 })

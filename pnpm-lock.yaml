@@ -286,6 +286,9 @@ packages:
   '@antfu/utils@0.7.10':
     resolution: {integrity: sha512-+562v9k4aI80m1+VuMHehNJWLOFjBnXn3tdOitzD0il5b7smkSBal4+a3oKiQTbrwMmN/TBUMDvbdoWDehgOww==}
 
+  '@aoles-gl/core@file:../aoles-gl-web-package/packages/core':
+    resolution: {directory: ../aoles-gl-web-package/packages/core, type: directory}
+
   '@aoles-gl/vue@file:../aoles-gl-web-package/packages/vue':
     resolution: {directory: ../aoles-gl-web-package/packages/vue, type: directory}
     peerDependencies:
@@ -4063,9 +4066,15 @@ snapshots:
 
   '@antfu/utils@0.7.10': {}
 
+  '@aoles-gl/core@file:../aoles-gl-web-package/packages/core':
+    dependencies:
+      lodash-es: 4.18.1
+      spark-md5: 3.0.2
+      zod: 3.25.76
+
   '@aoles-gl/vue@file:../aoles-gl-web-package/packages/vue(@ckpack/vue-color@1.6.0(vue@3.5.40(typescript@5.9.3)))(@ctrl/tinycolor@4.2.0)(@element-plus/icons-vue@2.3.2(vue@3.5.40(typescript@5.9.3)))(@floating-ui/vue@1.1.11(vue@3.5.40(typescript@5.9.3)))(@vueuse/core@10.11.1(vue@3.5.40(typescript@5.9.3)))(@webav/av-cliper@0.9.0-beta.21)(element-plus@2.14.3(vue@3.5.40(typescript@5.9.3)))(lodash-es@4.18.1)(opfs-tools@0.4.3)(pinia@2.3.1(typescript@5.9.3)(vue@3.5.40(typescript@5.9.3)))(spark-md5@3.0.2)(srt-parser-2@1.2.3)(vue-element-plus-x@1.3.98(rollup@4.62.3)(supports-color@8.1.1)(vue@3.5.40(typescript@5.9.3)))(vue-i18n@9.14.5(vue@3.5.40(typescript@5.9.3)))(vue-virtual-scroller@2.0.1(vue@3.5.40(typescript@5.9.3)))(vue3-moveable@0.18.1)(vue@3.5.40(typescript@5.9.3))(wavesurfer.js@7.12.11)(zod@4.4.3)':
     dependencies:
-      '@aoles-gl/core': link:../aoles-gl-web-package/packages/core
+      '@aoles-gl/core': file:../aoles-gl-web-package/packages/core
       '@ckpack/vue-color': 1.6.0(vue@3.5.40(typescript@5.9.3))
       '@ctrl/tinycolor': 4.2.0
       '@element-plus/icons-vue': 2.3.2(vue@3.5.40(typescript@5.9.3))
