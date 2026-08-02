@@ -16,6 +16,9 @@ import AolesGLVue, {
   initEffects,
 } from '@aoles-gl/vue'
 
+import controllerJs from '@aoles-gl/core/wasm/GLController.mjs?url'
+import controllerWasm from '@aoles-gl/core/wasm/GLController.wasm?url'
+
 import App from './App.vue'
 
 // 创建 i18n
@@ -48,10 +51,9 @@ app.use(ElementPlus)
 app.use(AolesGLVue)
 
 // 创建 Engine 实例并配置 WASM 路径
-import controllerJs from '/src/wasm/GLController.mjs?url'
-import controllerWasm from '/src/wasm/GLController.wasm?url'
 const engine = new Engine()
 engine.configure({ jsPath: controllerJs, wasmPath: controllerWasm })
+engine.initialVideoConfig = { width: 1920, height: 1080, fps: 30 }
 engine.configAssetPath({
   basePath: import.meta.env.VITE_ASSERT_BASEPATH || '/'
 })
