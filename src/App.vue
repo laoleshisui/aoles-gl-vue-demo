@@ -1,12 +1,5 @@
 <template>
   <div class="editor-root">
-    <!-- Header：应用层自行实现，不再由库提供 -->
-    <div class="card-style header-section">
-      <div class="app-header">
-        <span class="app-title">Editor</span>
-        <button class="add-text-btn" @click="addCustomText">+ 添加文字</button>
-      </div>
-    </div>
 
     <div class="main-content">
       <!-- 左侧资源面板 -->
@@ -45,28 +38,11 @@ import {
   TrackContainer,
   GlobalConfigDialog,
   useEngine,
-  usePreviewState,
-  createTrackPipeline,
 } from '@aoles-gl/vue'
 import ResourcePanel from './components/ResourcePanel.vue'
 
 const engine = useEngine()
-const previewState = usePreviewState(engine)
-const pipeline = createTrackPipeline(engine)
 
-async function addCustomText() {
-  await pipeline.addResource(
-    {
-      name: '请输入文字',   // name 才是引擎实际渲染的文字内容，content 无效
-      fontSize: 25,
-      fontFamily: 'NotoSansSC',
-      type: 'text',
-    },
-    { startTime: Number(previewState.currentTS) + 1 }
-  )
-  // 强制刷新一帧，否则暂停状态下不会重新渲染
-  await pipeline.renderCurrentFrame()
-}
 </script>
 
 <style>
