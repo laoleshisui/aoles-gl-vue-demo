@@ -1,5 +1,8 @@
+packages:
+  - '.'
+
 allowBuilds:
-  '@parcel/watcher': set this to true or false
-  canvas: set this to true or false
-  esbuild: set this to true or false
-  vue-demi: set this to true or false
+  '@parcel/watcher': true
+  canvas: false
+  esbuild: true
+  vue-demi: true

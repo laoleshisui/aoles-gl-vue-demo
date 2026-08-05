@@ -35,7 +35,7 @@
       <div class="main-content">
         <!-- 左侧资源面板 -->
         <div class="card-style resources-section">
-          <ResourcePanel />
+          <ResourceContainer extract-audio />
         </div>
 
         <!-- 右侧主区域 -->
@@ -72,11 +72,11 @@ import {
   AttributeContainer,
   TrackContainer,
   GlobalConfigDialog,
+  ResourceContainer,
   useEngine,
   usePageState,
   usePreviewState,
 } from '@aoles-gl/vue'
-import ResourcePanel from './components/ResourcePanel.vue'
 
 const engine = useEngine()
 const pageStore = usePageState(engine)
