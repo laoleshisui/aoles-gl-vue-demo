@@ -33,6 +33,8 @@
 ## 📋 前置要求
 
 - Node.js 18+
+- pnpm 11.18.0
+- 将 `aoles-gl-web-package` 仓库克隆到本仓库同级目录
 - [`aoles-gl-vue`](https://github.com/laoleshisui/aoles-gl-vue-open#-installation) 所需的 peer dependencies 均已包含在本项目的 `package.json` 中
 
 ## 🚀 快速开始
@@ -42,7 +44,7 @@
 ```bash
 git clone https://github.com/laoleshisui/aoles-gl-vue-test.git
 cd aoles-gl-vue-test
-npm install
+pnpm packages:install
 ```
 
 **2. 配置环境变量**
@@ -61,9 +63,14 @@ VITE_ASSERT_BASEPATH=https://your-cdn.com/assets/
 **4. 启动开发服务器**
 
 ```bash
-npm run dev
+pnpm dev
 # → http://localhost:4008
 ```
+
+`pnpm packages:install` 会在同级包仓库中构建可发布 tarball，并安装这些
+发布产物，而不是链接源码目录。`@aoles-gl/core` 和 `@aoles-gl/vue` 的
+`0.1.0` 发布后，可执行 `npm run registry:verify` 验证 registry 中的
+正式版本。
 
 ## 📁 项目结构
 

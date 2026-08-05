@@ -33,6 +33,8 @@ It shows a complete, real-world setup: all six editor components wired together,
 ## 📋 Prerequisites
 
 - Node.js 18+
+- pnpm 11.18.0
+- The `aoles-gl-web-package` repository cloned next to this repository
 - The peer dependencies listed in [`aoles-gl-vue`](https://github.com/laoleshisui/aoles-gl-vue-open#-installation) are all included in this project's `package.json`
 
 ## 🚀 Getting Started
@@ -42,7 +44,7 @@ It shows a complete, real-world setup: all six editor components wired together,
 ```bash
 git clone https://github.com/laoleshisui/aoles-gl-vue-test.git
 cd aoles-gl-vue-test
-npm install
+pnpm packages:install
 ```
 
 **2. Configure environment**
@@ -61,9 +63,14 @@ Put `GLController.mjs` and `GLController.wasm` in `src/wasm/`. These are the Web
 **4. Run**
 
 ```bash
-npm run dev
+pnpm dev
 # → http://localhost:4008
 ```
+
+`pnpm packages:install` builds publishable tarballs in the adjacent package
+repository and installs those artifacts. It does not link package source
+directories. After `@aoles-gl/core` and `@aoles-gl/vue` version `0.1.0` are
+published, `npm run registry:verify` verifies the real registry release.
 
 ## 📁 Project Structure
 

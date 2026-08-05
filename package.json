@@ -3,16 +3,19 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@11.18.0",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "packages:pack": "pnpm --dir ../aoles-gl-web-package release:pack",
+    "packages:install": "pnpm packages:pack && pnpm install --force",
+    "release:verify": "pnpm packages:install && pnpm build",
+    "registry:verify": "npm install && npm run build"
   },
   "dependencies": {
-    "@aoles-gl/core": "link:../aoles-gl-web-package/packages/core",
-    "@aoles-gl/theme": "link:../aoles-gl-web-package/packages/theme",
-    "@aoles-gl/ui": "link:../aoles-gl-web-package/packages/ui",
-    "@aoles-gl/vue": "link:../aoles-gl-web-package/packages/vue",
+    "@aoles-gl/core": "0.1.0",
+    "@aoles-gl/vue": "0.1.0",
     "@ckpack/vue-color": "^1.4.1",
     "@ctrl/tinycolor": "^4.2.0",
     "@element-plus/icons-vue": "^2.0.10",
