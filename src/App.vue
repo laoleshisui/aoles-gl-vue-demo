@@ -1,48 +1,100 @@
 <template>
-  <div class="editor-root">
-
-    <div class="main-content">
-      <!-- 左侧资源面板 -->
-      <div class="card-style resources-section">
-        <ResourcePanel />
-      </div>
-
-      <!-- 右侧主区域 -->
-      <div class="right-section">
-        <!-- 上：预览 + 属性 -->
-        <div class="preview-attr-row">
-          <div class="card-style preview-section">
-            <ControllerPreview />
-          </div>
-          <div class="card-style attr-section">
-            <AttributeContainer />
-          </div>
+  <AolesProvider :engine="engine">
+    <div class="editor-root">
+      <header class="header-bar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <el-icon><VideoCamera /></el-icon>
+          </span>
+          <span class="header-title">Aoles GL Vue</span>
         </div>
 
-        <!-- 下：轨道 -->
-        <div class="card-style track-section">
-          <TrackContainer />
+        <div class="header-actions">
+          <span
+            class="runtime-status"
+            :class="previewState.wasmRuntimeInited ? 'runtime-status-ready' : 'runtime-status-loading'"
+          >
+            <el-icon v-if="previewState.wasmRuntimeInited"><CircleCheck /></el-icon>
+            <el-icon v-else class="is-loading"><Loading /></el-icon>
+            {{ previewState.wasmRuntimeInited ? 'WASM Ready' : 'Loading WASM...' }}
+          </span>
+          <el-tooltip :content="pageStore.isDark ? '切换到浅色模式' : '切换到深色模式'" placement="bottom">
+            <button
+              class="theme-toggle"
+              type="button"
+              :aria-label="pageStore.isDark ? '切换到浅色模式' : '切换到深色模式'"
+              @click="pageStore.isDark = !pageStore.isDark"
+            >
+              <el-icon v-if="pageStore.isDark"><Sunny /></el-icon>
+              <el-icon v-else><Moon /></el-icon>
+            </button>
+          </el-tooltip>
+        </div>
+      </header>
+
+      <div class="main-content">
+        <!-- 左侧资源面板 -->
+        <div class="card-style resources-section">
+          <ResourcePanel />
+        </div>
+
+        <!-- 右侧主区域 -->
+        <div class="right-section">
+          <!-- 上：预览 + 属性 -->
+          <div class="preview-attr-row">
+            <div class="card-style preview-section">
+              <ControllerPreview />
+            </div>
+            <div class="card-style attr-section">
+              <AttributeContainer />
+            </div>
+          </div>
+
+          <!-- 下：轨道 -->
+          <div class="card-style track-section">
+            <TrackContainer />
+          </div>
         </div>
       </div>
+
+      <!-- 全局配置弹窗 -->
+      <GlobalConfigDialog />
     </div>
-
-    <!-- 全局配置弹窗 -->
-    <GlobalConfigDialog />
-  </div>
+  </AolesProvider>
 </template>
 
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, watch } from 'vue'
+import { CircleCheck, Loading, Moon, Sunny, VideoCamera } from '@element-plus/icons-vue'
 import {
+  AolesProvider,
   ControllerPreview,
   AttributeContainer,
   TrackContainer,
   GlobalConfigDialog,
   useEngine,
+  usePageState,
+  usePreviewState,
 } from '@aoles-gl/vue'
 import ResourcePanel from './components/ResourcePanel.vue'
 
 const engine = useEngine()
+const pageStore = usePageState(engine)
+const previewState = usePreviewState(engine)
 
+function syncDocumentTheme(isDark: boolean) {
+  document.documentElement.classList.toggle('dark', isDark)
+}
+
+onMounted(() => {
+  syncDocumentTheme(pageStore.isDark)
+})
+
+watch(() => pageStore.isDark, syncDocumentTheme)
+
+onBeforeUnmount(() => {
+  document.documentElement.classList.remove('dark')
+})
 </script>
 
 <style>
@@ -51,6 +103,12 @@ html, body {
   padding: 0;
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f3f5f7;
+}
+
+html.dark,
+html.dark body {
+  background: #12151a;
 }
 
 #app {
@@ -58,88 +116,103 @@ html, body {
 }
 
 .editor-root {
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  padding: 16px;
-  padding-bottom: 0;
+  overflow: hidden;
+  background: var(--aoles-color-canvas);
+  color: var(--aoles-color-text);
+  padding: 8px 12px 12px;
   box-sizing: border-box;
 }
 
-.dark .editor-root {
-  background: linear-gradient(135deg, #111827 0%, #030712 100%);
-}
-
-.card-style {
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  background: rgba(255,255,255,0.8);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(229,231,235,0.5);
-}
-
-.dark .card-style {
-  background: rgba(31,41,55,0.8);
-  border-color: rgba(55,65,81,0.5);
-}
-
-.header-section {
-  margin-bottom: 16px;
-}
-
-.app-header {
+.header-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  height: 44px;
+  flex-shrink: 0;
+  margin-bottom: 10px;
 }
 
-.app-title {
-  font-size: 18px;
+.brand,
+.header-actions,
+.runtime-status {
+  display: flex;
+  align-items: center;
+}
+
+.brand {
+  gap: 8px;
+}
+
+.brand-mark {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: var(--aoles-control-radius);
+  background: var(--aoles-color-primary);
+  color: #fff;
+}
+
+.header-title {
+  color: var(--aoles-color-text);
+  font-size: 14px;
   font-weight: 600;
-  color: #1f2937;
 }
 
-.dark .app-title {
-  color: #f9fafb;
+.header-actions {
+  gap: 12px;
 }
 
-.add-text-btn {
-  padding: 6px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  background: rgba(99, 102, 241, 0.1);
-  color: #4f46e5;
-  font-size: 13px;
-  font-weight: 500;
+.runtime-status {
+  gap: 5px;
+  font-size: 12px;
+}
+
+.runtime-status-loading {
+  color: var(--aoles-color-warning);
+}
+
+.runtime-status-ready {
+  color: var(--aoles-color-success);
+}
+
+.theme-toggle {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: var(--aoles-control-radius);
+  background: transparent;
+  color: var(--aoles-color-text-muted);
   cursor: pointer;
-  transition: all 0.15s;
+  font-size: 17px;
+  transition: background-color var(--aoles-motion-duration), color var(--aoles-motion-duration);
 }
 
-.add-text-btn:hover {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: rgba(99, 102, 241, 0.5);
+.theme-toggle:hover {
+  background: var(--aoles-color-surface-muted);
+  color: var(--aoles-color-text);
 }
 
-.dark .add-text-btn {
-  border-color: rgba(139, 92, 246, 0.4);
-  background: rgba(139, 92, 246, 0.15);
-  color: #a78bfa;
+.card-style {
+  border: 1px solid var(--aoles-color-border);
+  border-radius: var(--aoles-panel-radius);
+  background: var(--aoles-color-surface);
+  box-shadow: var(--aoles-shadow-panel);
 }
-
-.dark .add-text-btn:hover {
-  background: rgba(139, 92, 246, 0.25);
-  border-color: rgba(139, 92, 246, 0.6);
-}
-
 
 .main-content {
   display: flex;
   flex: 1;
   flex-direction: row;
   overflow: hidden;
-  gap: 16px;
+  gap: var(--aoles-panel-gap);
 }
 
 .resources-section {
@@ -159,8 +232,7 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  gap: 16px;
-  padding-top: 4px;
+  gap: var(--aoles-panel-gap);
   flex-grow: 1;
   min-width: 0;
 }
@@ -170,7 +242,7 @@ html, body {
   flex: 1;
   flex-direction: row;
   flex-wrap: nowrap;
-  gap: 16px;
+  gap: var(--aoles-panel-gap);
 }
 
 .preview-section {
@@ -205,10 +277,10 @@ html, body {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--aoles-color-surface-muted);
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: var(--aoles-color-border-strong);
   border-radius: 9999px;
 }
 </style>

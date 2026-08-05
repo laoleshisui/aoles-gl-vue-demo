@@ -220,25 +220,25 @@ async function addToTrack(item: ResourceItem) {
 
 .tab-btn {
   padding: 4px 10px;
-  border: 1px solid rgba(229, 231, 235, 0.8);
-  border-radius: 8px;
+  border: 1px solid var(--aoles-color-border);
+  border-radius: var(--aoles-control-radius);
   background: transparent;
   font-size: 12px;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--aoles-color-text-muted);
   transition: all 0.15s;
 }
 
 .tab-btn:hover {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.3);
-  color: #4f46e5;
+  background: var(--aoles-color-surface-muted);
+  border-color: var(--aoles-color-primary-hover);
+  color: var(--aoles-color-primary-hover);
 }
 
 .tab-btn.active {
-  background: rgba(99, 102, 241, 0.12);
-  border-color: rgba(99, 102, 241, 0.5);
-  color: #4f46e5;
+  background: var(--aoles-color-surface-muted);
+  border-color: var(--aoles-color-primary);
+  color: var(--aoles-color-primary);
   font-weight: 600;
 }
 
@@ -253,10 +253,10 @@ async function addToTrack(item: ResourceItem) {
   gap: 4px;
   width: 100%;
   padding: 8px 12px;
-  border: 1.5px dashed rgba(99, 102, 241, 0.4);
-  border-radius: 10px;
-  background: rgba(99, 102, 241, 0.04);
-  color: #4f46e5;
+  border: 1px dashed var(--aoles-color-primary);
+  border-radius: var(--aoles-control-radius);
+  background: var(--aoles-color-surface-muted);
+  color: var(--aoles-color-primary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -265,8 +265,9 @@ async function addToTrack(item: ResourceItem) {
 }
 
 .import-btn:hover {
-  background: rgba(99, 102, 241, 0.1);
-  border-color: rgba(99, 102, 241, 0.7);
+  background: var(--aoles-color-surface-raised);
+  border-color: var(--aoles-color-primary-hover);
+  color: var(--aoles-color-primary-hover);
 }
 
 .import-icon {
@@ -289,13 +290,13 @@ async function addToTrack(item: ResourceItem) {
   flex-direction: column;
   gap: 4px;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: var(--aoles-control-radius);
   padding: 4px;
   transition: background 0.15s;
 }
 
 .resource-item:hover {
-  background: rgba(99, 102, 241, 0.07);
+  background: var(--aoles-color-surface-muted);
 }
 
 .resource-item.loading {
@@ -307,9 +308,9 @@ async function addToTrack(item: ResourceItem) {
   position: relative;
   width: 100%;
   aspect-ratio: 16/9;
-  border-radius: 6px;
+  border-radius: var(--aoles-control-radius);
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--aoles-color-surface-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -349,7 +350,7 @@ async function addToTrack(item: ResourceItem) {
 
 .resource-name {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--aoles-color-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -363,7 +364,7 @@ async function addToTrack(item: ResourceItem) {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: #9ca3af;
+  color: var(--aoles-color-text-subtle);
 }
 
 .empty-icon {
@@ -379,7 +380,7 @@ async function addToTrack(item: ResourceItem) {
 /* scrollbar */
 .resource-grid::-webkit-scrollbar { width: 4px; }
 .resource-grid::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: var(--aoles-color-border-strong);
   border-radius: 9999px;
 }
 </style>
