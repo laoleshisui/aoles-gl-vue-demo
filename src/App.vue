@@ -10,6 +10,30 @@
         </div>
 
         <div class="header-actions">
+          <!-- 导出按钮区 -->
+          <template v-if="previewState.wasmRuntimeInited">
+            <div v-if="trackStore.isExporting" class="export-progress-wrap">
+              <span class="export-label">导出中 {{ trackStore.exportProgress }}%</span>
+              <el-progress
+                :percentage="trackStore.exportProgress"
+                :stroke-width="6"
+                style="width: 140px;"
+                status="striped"
+                striped
+                striped-flow
+              />
+              <el-button size="small" type="danger" plain @click="trackStore.stopExport()">取消</el-button>
+            </div>
+            <el-button
+              v-else
+              size="small"
+              type="primary"
+              :icon="VideoPlay"
+              @click="handleExport"
+            >
+              导出视频
+            </el-button>
+          </template>
           <span
             class="runtime-status"
             :class="previewState.wasmRuntimeInited ? 'runtime-status-ready' : 'runtime-status-loading'"
@@ -65,7 +89,7 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, watch } from 'vue'
-import { CircleCheck, Loading, Moon, Sunny, VideoCamera } from '@element-plus/icons-vue'
+import { CircleCheck, Loading, Moon, Sunny, VideoCamera, VideoPlay } from '@element-plus/icons-vue'
 import {
   AolesProvider,
   ControllerPreview,
@@ -76,11 +100,13 @@ import {
   useEngine,
   usePageState,
   usePreviewState,
+  useTrackState,
 } from '@aoles-gl/vue'
 
 const engine = useEngine()
 const pageStore = usePageState(engine)
 const previewState = usePreviewState(engine)
+const trackStore = useTrackState(engine)
 
 function syncDocumentTheme(isDark: boolean) {
   document.documentElement.classList.toggle('dark', isDark)
@@ -95,6 +121,16 @@ watch(() => pageStore.isDark, syncDocumentTheme)
 onBeforeUnmount(() => {
   document.documentElement.classList.remove('dark')
 })
+
+function handleExport() {
+  // width/height/fps/sample_rate 由 C++ 端从渲染 context 自动读取，无需传入。
+  // 若需要自定义编码参数，可传第二、三个参数：
+  // trackStore.startExport('/tmp/export_out.mp4',
+  //   { bps: 8_000_000, codec_name: 'libx264' },
+  //   { codec_name: 'aac', bps: 192000 }
+  // )
+  trackStore.startExport('/tmp/export_out.mp4')
+}
 </script>
 
 <style>
@@ -165,6 +201,21 @@ html.dark body {
 
 .header-actions {
   gap: 12px;
+}
+
+.export-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: var(--aoles-control-radius);
+  background: var(--aoles-color-surface-muted);
+}
+
+.export-label {
+  font-size: 12px;
+  color: var(--aoles-color-text-muted);
+  white-space: nowrap;
 }
 
 .runtime-status {

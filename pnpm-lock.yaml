@@ -112,7 +112,7 @@ packages:
     resolution: {integrity: sha512-+562v9k4aI80m1+VuMHehNJWLOFjBnXn3tdOitzD0il5b7smkSBal4+a3oKiQTbrwMmN/TBUMDvbdoWDehgOww==}
 
   '@aoles-gl/core@file:../aoles-gl-web-package/artifacts/release/aoles-gl-core-0.1.0.tgz':
-    resolution: {integrity: sha512-O63bxIM/OvezAwOa/mi1ljEFG4IE6Z3fy6KOC7nx68Q5uYWptrx1EWw9US47eZp1VFFq6LEODTmlJX1mzTyeSg==, tarball: file:../aoles-gl-web-package/artifacts/release/aoles-gl-core-0.1.0.tgz}
+    resolution: {integrity: sha512-7tz32s7gSAsPxZ9xbW4Zn2XxtywsadDtUFeUTIrghklxTZQcyJjoEXp4bNaSNfGytjWohrBvqd8A4NgiEh8xZA==, tarball: file:../aoles-gl-web-package/artifacts/release/aoles-gl-core-0.1.0.tgz}
     version: 0.1.0
 
   '@aoles-gl/theme@file:../aoles-gl-web-package/artifacts/release/aoles-gl-theme-0.1.0.tgz':
@@ -120,11 +120,11 @@ packages:
     version: 0.1.0
 
   '@aoles-gl/ui@file:../aoles-gl-web-package/artifacts/release/aoles-gl-ui-0.1.0.tgz':
-    resolution: {integrity: sha512-oyz8Tv8koEdK7L/Vj+X43MStUiH/qvps+f86f1QzfkPKiGmUJcjQpbeRJushp/zMh+ugWUdX4cBW2X6HBkwIFw==, tarball: file:../aoles-gl-web-package/artifacts/release/aoles-gl-ui-0.1.0.tgz}
+    resolution: {integrity: sha512-xgIa4wLvSi0hNQWueRIOpiiB787CtU67yDQ/67lGqy7ec+JSw3MVsbGXe1k2qQ0kRSk6QreJ46q+yYDuomRj6g==, tarball: file:../aoles-gl-web-package/artifacts/release/aoles-gl-ui-0.1.0.tgz}
     version: 0.1.0
 
   '@aoles-gl/vue@file:../aoles-gl-web-package/artifacts/release/aoles-gl-vue-0.1.0.tgz':
-    resolution: {integrity: sha512-HQBPS3dPL6Cf/ezG+HHxXQKXJpZd+Hz9ZoCRFhknW3NzRAenz0wP8nGdDPCRFXv3HDm/e5JrlsLZAelNX86FVA==, tarball: file:../aoles-gl-web-package/artifacts/release/aoles-gl-vue-0.1.0.tgz}
+    resolution: {integrity: sha512-ewtJn8LMeWXqQp871mLgxhspdK+mWsd+ubfFYFYNE4yPDiYJW20tl38nfFypyoZr/M7DZpatrcCDMCQjC3SCyQ==, tarball: file:../aoles-gl-web-package/artifacts/release/aoles-gl-vue-0.1.0.tgz}
     version: 0.1.0
     peerDependencies:
       '@ckpack/vue-color': ^1.4.0
