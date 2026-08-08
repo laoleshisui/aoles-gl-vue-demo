@@ -6,6 +6,11 @@ declare module '*.vue' {
   export default component
 }
 
+declare module '*.glsl?url' {
+  const url: string
+  export default url
+}
+
 interface ImportMetaEnv {
   readonly VITE_API_DATA_SERVER: string
   readonly VITE_API_GATEWAY: string

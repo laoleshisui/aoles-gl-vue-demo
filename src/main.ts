@@ -16,6 +16,9 @@ import AolesGLVue, {
   initEffects,
 } from '@aoles-gl/vue'
 
+// 引入 effects 包内打包的 GLSL URL resolver
+import { TEXT_EFFECTS, VIDEO_EFFECTS, resolveGlslUrl } from '@aoles-gl/effects'
+
 import controllerJs from '@aoles-gl/core/wasm/GLController.mjs?url'
 import controllerWasm from '@aoles-gl/core/wasm/GLController.wasm?url'
 
@@ -54,36 +57,43 @@ app.use(AolesGLVue)
 const engine = new Engine(undefined, undefined, { width: 1920, height: 1080, fps: 30 })
 engine.configure({ jsPath: controllerJs, wasmPath: controllerWasm })
 engine.configAssetPath({
-  basePath: import.meta.env.VITE_ASSERT_BASEPATH || '/'
+  basePath: import.meta.env.VITE_ASSERT_BASEPATH || '/',
+  glslUrlResolver: resolveGlslUrl,
 })
 
-// WASM 就绪后预加载字体和 shader 到 WASM 文件系统（文字渲染必须）
+// WASM 就绪后预加载字体；shader 由 initEffects 和各轨道通过 resolver 加载
 const ASSET_PRELOAD_LIST = [
-  '/fonts/NotoSansSC-Regular.ttf',
-  '/glsl/text/position_text.glsl',
-  '/glsl/video/position.glsl',
-  '/glsl/video/effect/hflip.glsl',
-]
+  { url: '/fonts/NotoSansSC-Regular.ttf', wasmPath: '/fonts/NotoSansSC-Regular.ttf' },
+  // position shaders are attached directly by the Vue track bridge
+  { url: resolveGlslUrl('/glsl/text/position_text.glsl'), wasmPath: '/glsl/text/position_text.glsl' },
+  { url: resolveGlslUrl('/glsl/video/position.glsl'), wasmPath: '/glsl/video/position.glsl' },
+].filter((asset): asset is { url: string; wasmPath: string } => Boolean(asset.url))
 
 engine.onWasmReady(async () => {
   const base = (import.meta.env.VITE_ASSERT_BASEPATH || '').replace(/\/$/, '')
-  for (const assetPath of ASSET_PRELOAD_LIST) {
+  for (const asset of ASSET_PRELOAD_LIST) {
     try {
-      const res = await fetch(base + assetPath)
-      if (!res.ok) { console.warn(`[aoles-gl] 加载失败: ${assetPath}`); continue }
+      // 如果 url 是相对路径（字体），添加 basePath；如果是 Vite 生成的绝对 URL，直接使用
+      const fetchPath = asset.url.startsWith('/') && !asset.url.startsWith('/assets')
+        ? base + asset.url
+        : asset.url
+
+      const res = await fetch(fetchPath)
+      if (!res.ok) { console.warn(`[aoles-gl] 加载失败: ${asset.wasmPath}`); continue }
       const buf = new Uint8Array(await res.arrayBuffer())
+
       // 确保目录存在
       const fs = (engine as any).controllerWasmLoader.module['GLController'].FS
-      const parts = assetPath.split('/').filter(Boolean)
+      const parts = asset.wasmPath.split('/').filter(Boolean)
       parts.pop()
       let dir = ''
       for (const part of parts) {
         dir += `/${part}`
         try { fs.mkdir(dir) } catch {}
       }
-      fs.writeFile(assetPath, buf)
+      fs.writeFile(asset.wasmPath, buf)
     } catch (e) {
-      console.warn(`[aoles-gl] 预加载失败: ${assetPath}`, e)
+      console.warn(`[aoles-gl] 预加载失败: ${asset.wasmPath}`, e)
     }
   }
 })
