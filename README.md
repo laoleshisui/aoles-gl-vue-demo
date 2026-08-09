@@ -10,7 +10,7 @@
 
 ## 快速开始
 
-要求：Node.js 20+、pnpm 11.18.0。
+要求：Node.js 22.13+、pnpm 11.18.0。
 
 ```bash
 pnpm install
