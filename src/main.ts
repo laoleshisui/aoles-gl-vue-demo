@@ -47,28 +47,22 @@ app.use(AolesGLVue)
 const engine = new Engine(undefined, undefined, { width: 1920, height: 1080, fps: 30 })
 engine.configure({ jsPath: controllerJs, wasmPath: controllerWasm })
 engine.configAssetPath({
-  basePath: import.meta.env.VITE_ASSERT_BASEPATH || '/',
+  basePath: import.meta.env.VITE_ASSERT_BASEPATH || import.meta.env.BASE_URL,
   glslUrlResolver: resolveGlslUrl,
 })
 
 // WASM 就绪后预加载字体；shader 由 initEffects 和各轨道通过 resolver 加载
 const ASSET_PRELOAD_LIST = [
-  { url: '/fonts/NotoSansSC-Regular.ttf', wasmPath: '/fonts/NotoSansSC-Regular.ttf' },
+  { url: `${import.meta.env.BASE_URL}fonts/NotoSansSC-Regular.ttf`, wasmPath: '/fonts/NotoSansSC-Regular.ttf' },
   // position shaders are attached directly by the Vue track bridge
   { url: resolveGlslUrl('/glsl/text/position_text.glsl'), wasmPath: '/glsl/text/position_text.glsl' },
   { url: resolveGlslUrl('/glsl/video/position.glsl'), wasmPath: '/glsl/video/position.glsl' },
 ].filter((asset): asset is { url: string; wasmPath: string } => Boolean(asset.url))
 
 engine.onWasmReady(async () => {
-  const base = (import.meta.env.VITE_ASSERT_BASEPATH || '').replace(/\/$/, '')
   for (const asset of ASSET_PRELOAD_LIST) {
     try {
-      // 如果 url 是相对路径（字体），添加 basePath；如果是 Vite 生成的绝对 URL，直接使用
-      const fetchPath = asset.url.startsWith('/') && !asset.url.startsWith('/assets')
-        ? base + asset.url
-        : asset.url
-
-      const res = await fetch(fetchPath)
+      const res = await fetch(asset.url)
       if (!res.ok) { console.warn(`[aoles-gl] 加载失败: ${asset.wasmPath}`); continue }
       const buf = new Uint8Array(await res.arrayBuffer())
 

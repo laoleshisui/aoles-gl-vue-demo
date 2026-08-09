@@ -3,7 +3,7 @@
     <div class="editor-root">
       <header class="header-bar">
         <div class="brand">
-          <img class="brand-logo" src="/logo.png" alt="Pixo" />
+          <img class="brand-logo" :src="`${baseUrl}logo.png`" alt="Pixo" />
           <span class="header-title">Aoles GL Vue</span>
         </div>
 
@@ -105,6 +105,7 @@ const engine = useEngine()
 const pageStore = usePageState(engine)
 const previewState = usePreviewState(engine)
 const trackStore = useTrackState(engine)
+const baseUrl = import.meta.env.BASE_URL
 
 function syncDocumentTheme(isDark: boolean) {
   document.documentElement.classList.toggle('dark', isDark)
