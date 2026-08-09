@@ -1,15 +1,15 @@
 packages:
   - '.'
 
-overrides:
-  '@aoles-gl/core': 'file:../aoles-gl-web-package/artifacts/release/aoles-gl-core-0.1.0.tgz'
-  '@aoles-gl/theme': 'file:../aoles-gl-web-package/artifacts/release/aoles-gl-theme-0.1.0.tgz'
-  '@aoles-gl/ui': 'file:../aoles-gl-web-package/artifacts/release/aoles-gl-ui-0.1.0.tgz'
-  '@aoles-gl/effects': 'file:../aoles-gl-web-package/artifacts/release/aoles-gl-effects-0.1.0.tgz'
-  '@aoles-gl/vue': 'file:../aoles-gl-web-package/artifacts/release/aoles-gl-vue-0.1.0.tgz'
-
 allowBuilds:
   '@parcel/watcher': true
   canvas: false
   esbuild: true
   vue-demi: true
+
+minimumReleaseAgeExclude:
+  - '@aoles-gl/core@0.1.0'
+  - '@aoles-gl/effects@0.1.0'
+  - '@aoles-gl/theme@0.1.0'
+  - '@aoles-gl/ui@0.1.0'
+  - '@aoles-gl/vue@0.1.0'

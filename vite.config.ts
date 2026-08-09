@@ -1,14 +1,10 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import VitePluginVueDevtools from 'vite-plugin-vue-devtools';
 
-export default defineConfig(({ mode }) => ({
-  plugins: [
-    vue(),
-    VitePluginVueDevtools(),
-  ],
+export default defineConfig({
+  plugins: [vue()],
   resolve: {
-    dedupe: ['vue', 'pinia', 'vue-router'],
+    dedupe: ['vue', 'pinia'],
   },
   server: {
     port: 4008,
@@ -17,4 +13,4 @@ export default defineConfig(({ mode }) => ({
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
   },
-}))
+})

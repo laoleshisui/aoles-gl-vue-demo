@@ -1,6 +1,5 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import { createRouter, createWebHistory } from 'vue-router'
 import { createI18n } from 'vue-i18n'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
@@ -35,20 +34,11 @@ const i18n = createI18n({
 // 合并组件库的语言包
 setupAolesI18n(i18n)
 
-// 创建路由
-const router = createRouter({
-  history: createWebHistory(),
-  routes: [
-    { path: '/', component: App },
-  ],
-})
-
 // 创建 app
 const app = createApp(App)
 
 // 安装插件
 app.use(createPinia())
-app.use(router)
 app.use(i18n)
 app.use(ElementPlus)
 app.use(AolesGLVue)

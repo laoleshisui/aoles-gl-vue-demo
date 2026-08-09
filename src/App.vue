@@ -3,9 +3,7 @@
     <div class="editor-root">
       <header class="header-bar">
         <div class="brand">
-          <span class="brand-mark" aria-hidden="true">
-            <el-icon><VideoCamera /></el-icon>
-          </span>
+          <img class="brand-logo" src="/logo.png" alt="Pixo" />
           <span class="header-title">Aoles GL Vue</span>
         </div>
 
@@ -89,7 +87,7 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, watch } from 'vue'
-import { CircleCheck, Loading, Moon, Sunny, VideoCamera, VideoPlay } from '@element-plus/icons-vue'
+import { CircleCheck, Loading, Moon, Sunny, VideoPlay } from '@element-plus/icons-vue'
 import {
   AolesProvider,
   ControllerPreview,
@@ -183,14 +181,11 @@ html.dark body {
   gap: 8px;
 }
 
-.brand-mark {
-  display: grid;
-  width: 24px;
+.brand-logo {
+  display: block;
+  width: 48px;
   height: 24px;
-  place-items: center;
-  border-radius: var(--aoles-control-radius);
-  background: var(--aoles-color-primary);
-  color: #fff;
+  object-fit: contain;
 }
 
 .header-title {
