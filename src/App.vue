@@ -32,6 +32,15 @@
               导出视频
             </el-button>
           </template>
+          <el-button
+            size="small"
+            :type="aiOpen ? 'primary' : 'default'"
+            :icon="MagicStick"
+            :aria-pressed="aiOpen"
+            @click="aiOpen = !aiOpen"
+          >
+            AI 助手
+          </el-button>
           <span
             class="runtime-status"
             :class="previewState.wasmRuntimeInited ? 'runtime-status-ready' : 'runtime-status-loading'"
@@ -77,6 +86,30 @@
             <TrackContainer />
           </div>
         </div>
+
+        <aside v-if="aiOpen" class="ai-section">
+          <div v-if="aiEnabled" class="ai-panel-shell">
+            <div v-if="aiAuthenticated" class="ai-auth-toolbar">
+              <span>鉴权：{{ aiAuthLabel }}</span>
+              <el-button size="small" text @click="apiKeyEditorOpen = !apiKeyEditorOpen">
+                {{ apiKeyEditorOpen ? '返回助手' : '配置 API-Key' }}
+              </el-button>
+            </div>
+            <AiApiKeyConfig
+              v-if="apiKeyEditorOpen || !aiAuthenticated"
+              :configured="Boolean(apiKey)"
+              :can-cancel="aiAuthenticated"
+              @save="saveAiApiKey"
+              @cancel="apiKeyEditorOpen = false"
+              @clear="clearAiApiKey"
+            />
+            <AolesAiPanel v-else :config="aiConfig" />
+          </div>
+          <div v-else class="ai-unavailable">
+            <strong>AI 助手尚未配置</strong>
+            <span>请在 <code>.env.development.local</code> 中设置 <code>VITE_API_AGENT</code>。</span>
+          </div>
+        </aside>
       </div>
 
       <!-- 全局配置弹窗 -->
@@ -86,8 +119,9 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, watch } from 'vue'
-import { CircleCheck, Loading, Moon, Sunny, VideoPlay } from '@element-plus/icons-vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { CircleCheck, Loading, MagicStick, Moon, Sunny, VideoPlay } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import {
   AolesProvider,
   ControllerPreview,
@@ -98,14 +132,85 @@ import {
   useEngine,
   usePageState,
   usePreviewState,
+  useResourceState,
   useTrackState,
 } from '@aoles-gl/vue'
+import { AolesAiPanel, type VueAolesAiConfig } from '@aoles-gl/vue/ai'
+import AiApiKeyConfig from './components/AiApiKeyConfig.vue'
+
+const AI_API_KEY_STORAGE_KEY = 'aoles-gl-vue-demo:ai-api-key'
+
+function readAccessToken() {
+  const token = localStorage.getItem('access_token')?.trim()
+  return token && token !== 'your-token' ? token : undefined
+}
 
 const engine = useEngine()
 const pageStore = usePageState(engine)
 const previewState = usePreviewState(engine)
+const resourceState = useResourceState(engine)
 const trackStore = useTrackState(engine)
 const baseUrl = import.meta.env.BASE_URL
+const aiOpen = ref(true)
+const apiKey = ref(sessionStorage.getItem(AI_API_KEY_STORAGE_KEY)?.trim() ?? '')
+const apiKeyEditorOpen = ref(!apiKey.value && !readAccessToken())
+const agentBaseUrl = import.meta.env.VITE_API_AGENT?.trim().replace(/\/+$/, '') ?? ''
+const aiEnabled = Boolean(agentBaseUrl)
+const aiAuthenticated = computed(() => Boolean(apiKey.value || readAccessToken()))
+const aiAuthLabel = computed(() => apiKey.value ? 'API-Key（当前标签页）' : 'JWT')
+const aiEndpoint = agentBaseUrl.endsWith('/api/chat')
+  ? agentBaseUrl
+  : `${agentBaseUrl}/api/chat`
+
+const aiConfig: VueAolesAiConfig & { storageKey: string } = {
+  endpoint: aiEndpoint,
+  storageKey: 'aoles-gl-vue-demo:ai-sessions',
+  getToken: () => apiKey.value ? undefined : readAccessToken(),
+  headers: () => apiKey.value
+    ? { Authorization: `Api-Key ${apiKey.value}` }
+    : {},
+  getAssets: () => resourceState.resources.value
+    .filter(resource => (
+      resource.status === 'ready'
+      && (resource.type === 'video' || resource.type === 'audio' || resource.type === 'image')
+    ))
+    .map(resource => ({
+      id: resource.id,
+      type: resource.type,
+      prompt: resource.name,
+      urls: [{
+        id: resource.id,
+        url: resource.url,
+        origin_url: null,
+        ...resource.metadata,
+      }],
+    })),
+  authorizeToolCall: ({ name }) => {
+    if (name === 'removeClip' || name === 'removeTrack') {
+      return window.confirm('允许 AI 助手删除编辑器内容吗？')
+    }
+    return true
+  },
+  onError: error => {
+    console.error('[aoles-gl-ai]', error)
+    const message = error instanceof Error ? error.message : String(error)
+    if (/401|invalid (token|credentials|api key)/i.test(message)) {
+      ElMessage.error('AI 鉴权失败，请检查 API-Key 或重新登录。')
+    }
+  },
+}
+
+function saveAiApiKey(value: string) {
+  sessionStorage.setItem(AI_API_KEY_STORAGE_KEY, value)
+  apiKey.value = value
+  apiKeyEditorOpen.value = false
+}
+
+function clearAiApiKey() {
+  sessionStorage.removeItem(AI_API_KEY_STORAGE_KEY)
+  apiKey.value = ''
+  apiKeyEditorOpen.value = !readAccessToken()
+}
 
 function syncDocumentTheme(isDark: boolean) {
   document.documentElement.classList.toggle('dark', isDark)
@@ -284,6 +389,59 @@ html.dark body {
   min-width: 0;
 }
 
+.ai-section {
+  width: min(380px, 30vw);
+  min-width: 320px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.ai-panel-shell {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-panel-shell > :last-child {
+  min-height: 0;
+  flex: 1;
+}
+
+.ai-auth-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border: 1px solid var(--aoles-color-border);
+  border-radius: var(--aoles-control-radius);
+  color: var(--aoles-color-text-muted);
+  background: var(--aoles-color-surface);
+  font-size: 12px;
+}
+
+.ai-unavailable {
+  display: flex;
+  height: 100%;
+  min-height: 320px;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  border: 1px solid var(--aoles-color-border);
+  border-radius: var(--aoles-panel-radius);
+  color: var(--aoles-color-text-muted);
+  background: var(--aoles-color-surface);
+  text-align: center;
+}
+
+.ai-unavailable strong {
+  color: var(--aoles-color-text);
+}
+
 .preview-attr-row {
   display: flex;
   flex: 1;
@@ -316,6 +474,12 @@ html.dark body {
   .main-content,
   .preview-attr-row {
     flex-direction: column !important;
+  }
+
+  .ai-section {
+    width: 100%;
+    min-width: 0;
+    height: 420px;
   }
 }
 

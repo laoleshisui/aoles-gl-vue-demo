@@ -13,7 +13,10 @@
   "dependencies": {
     "@aoles-gl/core": "0.1.0",
     "@aoles-gl/effects": "0.1.0",
+    "@aoles-gl/theme": "0.1.0",
+    "@aoles-gl/ui": "0.1.0",
     "@aoles-gl/vue": "0.1.0",
+    "@ai-sdk/vue": "^3.0.0",
     "@ckpack/vue-color": "^1.4.1",
     "@ctrl/tinycolor": "^4.2.0",
     "@element-plus/icons-vue": "^2.0.10",
@@ -21,6 +24,7 @@
     "@vueuse/core": "^10.9.0",
     "@webav/av-cliper": "0.9.0",
     "element-plus": "^2.11.1",
+    "ai": "^6.0.0",
     "lodash-es": "^4.17.21",
     "opfs-tools": "^0.4.1",
     "pinia": "^2.0.28",
