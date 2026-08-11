@@ -89,21 +89,17 @@
 
         <aside v-if="aiOpen" class="ai-section">
           <div v-if="aiEnabled" class="ai-panel-shell">
-            <div v-if="aiAuthenticated" class="ai-auth-toolbar">
-              <span>鉴权：{{ aiAuthLabel }}</span>
-              <el-button size="small" text @click="apiKeyEditorOpen = !apiKeyEditorOpen">
-                {{ apiKeyEditorOpen ? '返回助手' : '配置 API-Key' }}
-              </el-button>
-            </div>
             <AiApiKeyConfig
-              v-if="apiKeyEditorOpen || !aiAuthenticated"
               :configured="Boolean(apiKey)"
-              :can-cancel="aiAuthenticated"
+              :authenticated="aiAuthenticated"
+              :expanded="apiKeyEditorOpen || !aiAuthenticated"
+              :auth-label="aiAuthLabel"
               @save="saveAiApiKey"
+              @edit="apiKeyEditorOpen = true"
               @cancel="apiKeyEditorOpen = false"
               @clear="clearAiApiKey"
             />
-            <AolesAiPanel v-else :config="aiConfig" />
+            <AolesAiPanel v-if="aiAuthenticated" :config="aiConfig" />
           </div>
           <div v-else class="ai-unavailable">
             <strong>AI 助手尚未配置</strong>
@@ -138,13 +134,6 @@ import {
 import { AolesAiPanel, type VueAolesAiConfig } from '@aoles-gl/vue/ai'
 import AiApiKeyConfig from './components/AiApiKeyConfig.vue'
 
-const AI_API_KEY_STORAGE_KEY = 'aoles-gl-vue-demo:ai-api-key'
-
-function readAccessToken() {
-  const token = localStorage.getItem('access_token')?.trim()
-  return token && token !== 'your-token' ? token : undefined
-}
-
 const engine = useEngine()
 const pageStore = usePageState(engine)
 const previewState = usePreviewState(engine)
@@ -152,12 +141,12 @@ const resourceState = useResourceState(engine)
 const trackStore = useTrackState(engine)
 const baseUrl = import.meta.env.BASE_URL
 const aiOpen = ref(true)
-const apiKey = ref(sessionStorage.getItem(AI_API_KEY_STORAGE_KEY)?.trim() ?? '')
-const apiKeyEditorOpen = ref(!apiKey.value && !readAccessToken())
+const apiKey = ref('')
+const apiKeyEditorOpen = ref(!apiKey.value)
 const agentBaseUrl = import.meta.env.VITE_API_AGENT?.trim().replace(/\/+$/, '') ?? ''
 const aiEnabled = Boolean(agentBaseUrl)
-const aiAuthenticated = computed(() => Boolean(apiKey.value || readAccessToken()))
-const aiAuthLabel = computed(() => apiKey.value ? 'API-Key（当前标签页）' : 'JWT')
+const aiAuthenticated = computed(() => Boolean(apiKey.value))
+const aiAuthLabel = 'API-Key（当前标签页）'
 const aiEndpoint = agentBaseUrl.endsWith('/api/chat')
   ? agentBaseUrl
   : `${agentBaseUrl}/api/chat`
@@ -165,7 +154,6 @@ const aiEndpoint = agentBaseUrl.endsWith('/api/chat')
 const aiConfig: VueAolesAiConfig & { storageKey: string } = {
   endpoint: aiEndpoint,
   storageKey: 'aoles-gl-vue-demo:ai-sessions',
-  getToken: () => apiKey.value ? undefined : readAccessToken(),
   headers: () => apiKey.value
     ? { Authorization: `Api-Key ${apiKey.value}` }
     : {},
@@ -195,21 +183,23 @@ const aiConfig: VueAolesAiConfig & { storageKey: string } = {
     console.error('[aoles-gl-ai]', error)
     const message = error instanceof Error ? error.message : String(error)
     if (/401|invalid (token|credentials|api key)/i.test(message)) {
-      ElMessage.error('AI 鉴权失败，请检查 API-Key 或重新登录。')
+      ElMessage.error('AI 鉴权失败，请检查 PixoClip API-Key。')
+    } else if (/tool round limit/i.test(message)) {
+      ElMessage.warning('AI 操作步骤过多，已自动停止。请缩小任务范围后重试。')
+    } else {
+      ElMessage.error(`AI 请求失败：${message}`)
     }
   },
 }
 
 function saveAiApiKey(value: string) {
-  sessionStorage.setItem(AI_API_KEY_STORAGE_KEY, value)
   apiKey.value = value
   apiKeyEditorOpen.value = false
 }
 
 function clearAiApiKey() {
-  sessionStorage.removeItem(AI_API_KEY_STORAGE_KEY)
   apiKey.value = ''
-  apiKeyEditorOpen.value = !readAccessToken()
+  apiKeyEditorOpen.value = true
 }
 
 function syncDocumentTheme(isDark: boolean) {
@@ -404,21 +394,9 @@ html.dark body {
   gap: 8px;
 }
 
-.ai-panel-shell > :last-child {
+.ai-panel-shell > .aoles-ai-panel {
   min-height: 0;
   flex: 1;
-}
-
-.ai-auth-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 8px;
-  border: 1px solid var(--aoles-color-border);
-  border-radius: var(--aoles-control-radius);
-  color: var(--aoles-color-text-muted);
-  background: var(--aoles-color-surface);
-  font-size: 12px;
 }
 
 .ai-unavailable {
