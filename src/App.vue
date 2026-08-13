@@ -383,11 +383,11 @@ onBeforeUnmount(() => {
 function handleExport() {
   // width/height/fps/sample_rate 由 C++ 端从渲染 context 自动读取，无需传入。
   // 若需要自定义编码参数，可传第二、三个参数：
-  // trackStore.startExport('/tmp/export_out.mp4',
+  // trackStore.startExport('/opfs/export_out.mp4',
   //   { bps: 8_000_000, codec_name: 'libx264' },
   //   { codec_name: 'aac', bps: 192000 }
   // )
-  trackStore.startExport('/tmp/export_out.mp4')
+  trackStore.startExport('/opfs/export_out.mp4')
 }
 </script>
 

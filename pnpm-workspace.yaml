@@ -13,3 +13,10 @@ minimumReleaseAgeExclude:
   - '@aoles-gl/theme@0.1.0'
   - '@aoles-gl/ui@0.1.0'
   - '@aoles-gl/vue@0.1.0'
+
+overrides:
+  '@aoles-gl/core': link:../aoles-gl-web-package/packages/core
+  '@aoles-gl/effects': link:../aoles-gl-web-package/packages/effects
+  '@aoles-gl/theme': link:../aoles-gl-web-package/packages/theme
+  '@aoles-gl/ui': link:../aoles-gl-web-package/packages/ui
+  '@aoles-gl/vue': link:../aoles-gl-web-package/packages/vue
