@@ -45,6 +45,7 @@ app.use(AolesGLVue)
 
 // 创建 Engine 实例并配置 WASM 路径
 const engine = new Engine(undefined, undefined, { width: 1920, height: 1080, fps: 30 })
+engine.configureResourceNamespace('aoles-gl-vue-demo')
 engine.configure({ jsPath: controllerJs, wasmPath: controllerWasm })
 engine.configAssetPath({
   basePath: import.meta.env.BASE_URL,
