@@ -8,6 +8,7 @@
         </div>
 
         <div class="header-actions">
+          <DraftManagerDialog :recovery="draftRecovery" />
           <!-- 导出按钮区 -->
           <template v-if="previewState.wasmRuntimeInited">
             <div v-if="trackStore.isExporting" class="export-progress-wrap">
@@ -176,6 +177,7 @@ import {
   GlobalConfigDialog,
   ResourceContainer,
   useEngine,
+  useDraftRecovery,
   usePageState,
   usePreviewState,
   useResourceState,
@@ -189,12 +191,14 @@ import {
   type VueAolesAiConfig,
 } from '@aoles-gl/vue/ai'
 import AiApiKeyConfig from './components/AiApiKeyConfig.vue'
+import DraftManagerDialog from './components/DraftManagerDialog.vue'
 
 const engine = useEngine()
 const pageStore = usePageState(engine)
 const previewState = usePreviewState(engine)
 const resourceState = useResourceState(engine)
 const trackStore = useTrackState(engine)
+const draftRecovery = useDraftRecovery(engine)
 const baseUrl = import.meta.env.BASE_URL
 const aiOpen = ref(true)
 const apiKey = ref('')
@@ -244,6 +248,14 @@ const aiProfileTooltip = computed(() => {
   return '选择 AI 模型档位'
 })
 let aiProfilesRequestId = 0
+
+watch(() => draftRecovery.report.value, (report) => {
+  if (!report || report.restored) return
+  const missing = report.missingAssets.length
+    ? ` 缺失资源：${report.missingAssets.join('、')}`
+    : ''
+  ElMessage.warning(`草稿恢复失败。${report.error ?? ''}${missing}`.trim())
+})
 
 const aiConfig: VueAolesAiConfig & { storageKey: string } = {
   endpoint: aiEndpoint,
