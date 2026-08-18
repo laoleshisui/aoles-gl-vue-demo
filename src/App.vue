@@ -42,6 +42,13 @@
           >
             AI 助手
           </el-button>
+          <el-button
+            size="small"
+            :icon="Tools"
+            @click="healthCheckDialogVisible = true"
+          >
+            健康检查
+          </el-button>
           <span
             class="runtime-status"
             :class="previewState.wasmRuntimeInited ? 'runtime-status-ready' : 'runtime-status-loading'"
@@ -161,13 +168,23 @@
 
       <!-- 全局配置弹窗 -->
       <GlobalConfigDialog />
+
+      <!-- 健康检查对话框 -->
+      <el-dialog
+        v-model="healthCheckDialogVisible"
+        title="资源健康检查"
+        width="90%"
+        :close-on-click-modal="false"
+      >
+        <HealthCheckPanel :engine="engine" />
+      </el-dialog>
     </div>
   </AolesProvider>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { ArrowDown, Check, CircleCheck, Cpu, Loading, Lock, MagicStick, Moon, Sunny, VideoPlay } from '@element-plus/icons-vue'
+import { ArrowDown, Check, CircleCheck, Cpu, Loading, Lock, MagicStick, Moon, Sunny, Tools, VideoPlay } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import {
   AolesProvider,
@@ -192,6 +209,7 @@ import {
 } from '@aoles-gl/vue/ai'
 import AiApiKeyConfig from './components/AiApiKeyConfig.vue'
 import DraftManagerDialog from './components/DraftManagerDialog.vue'
+import HealthCheckPanel from './components/HealthCheckPanel.vue'
 
 const engine = useEngine()
 const pageStore = usePageState(engine)
@@ -201,6 +219,7 @@ const trackStore = useTrackState(engine)
 const draftRecovery = useDraftRecovery(engine)
 const baseUrl = import.meta.env.BASE_URL
 const aiOpen = ref(true)
+const healthCheckDialogVisible = ref(false)
 const apiKey = ref('')
 const apiKeyEditorOpen = ref(!apiKey.value)
 const agentBaseUrl = import.meta.env.VITE_API_AGENT?.trim().replace(/\/+$/, '') ?? ''
