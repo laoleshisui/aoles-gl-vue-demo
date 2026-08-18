@@ -209,7 +209,7 @@ import {
 } from '@aoles-gl/vue/ai'
 import AiApiKeyConfig from './components/AiApiKeyConfig.vue'
 import DraftManagerDialog from './components/DraftManagerDialog.vue'
-import HealthCheckPanel from './components/HealthCheckPanel.vue'
+import { HealthCheckPanel } from '@aoles-gl/vue'
 
 const engine = useEngine()
 const pageStore = usePageState(engine)
