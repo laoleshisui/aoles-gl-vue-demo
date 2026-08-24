@@ -9,6 +9,19 @@
 
         <div class="header-actions">
           <DraftManagerDialog :recovery="draftRecovery" />
+          <el-select
+            v-if="workspaceId && projects.length"
+            v-model="projectId"
+            size="small"
+            class="project-select"
+            :loading="projectsLoading"
+            @change="switchProject"
+          >
+            <el-option v-for="project in projects" :key="project.id" :label="project.name" :value="project.id" />
+          </el-select>
+          <el-button v-if="workspaceId" size="small" :icon="Plus" @click="openProjectCreate">新建项目</el-button>
+          <el-button v-if="currentProject && !currentProject.isDefault" size="small" :icon="Edit" @click="openProjectRename">重命名</el-button>
+          <el-button v-if="currentProject && !currentProject.isDefault" size="small" type="danger" plain :icon="Delete" @click="removeCurrentProject">删除项目</el-button>
           <!-- 导出按钮区 -->
           <template v-if="previewState.wasmRuntimeInited">
             <div v-if="trackStore.isExporting" class="export-progress-wrap">
@@ -178,20 +191,32 @@
       >
         <HealthCheckPanel :engine="engine" />
       </el-dialog>
+
+      <el-dialog v-model="projectDialogVisible" :title="projectDialogMode === 'create' ? '新建项目' : '重命名项目'" width="420px">
+        <el-input v-model="projectName" maxlength="80" placeholder="项目名称" @keyup.enter="submitProjectDialog" />
+        <template #footer>
+          <el-button @click="projectDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="projectsLoading" @click="submitProjectDialog">确定</el-button>
+        </template>
+      </el-dialog>
     </div>
   </AolesProvider>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { ArrowDown, Check, CircleCheck, Cpu, Loading, Lock, MagicStick, Moon, Sunny, Tools, VideoPlay } from '@element-plus/icons-vue'
+import { ArrowDown, Check, CircleCheck, Cpu, Delete, Edit, Loading, Lock, MagicStick, Moon, Plus, Sunny, Tools, VideoPlay } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import {
   createArtifactHttpRepository,
+  createDraftHttpAdapter,
+  createProjectRepository,
   createShaderLibraryRepository,
   createWorkspaceRepository,
+  getDraftManager,
   type ArtifactRepository,
   type ShaderLibraryRepository,
+  type WorkspaceProject,
 } from '@aoles-gl/core'
 import {
   AolesProvider,
@@ -223,17 +248,28 @@ const pageStore = usePageState(engine)
 const previewState = usePreviewState(engine)
 const resourceState = useResourceState(engine)
 const trackStore = useTrackState(engine)
-const draftRecovery = useDraftRecovery(engine)
+const legacyProjectId = 'aoles-gl-vue-demo:project:default'
+const legacyAutosaveId = 'aoles-gl-vue-demo:autosave'
+const projectId = ref(legacyProjectId)
+const draftManager = getDraftManager(engine)
+const draftRecovery = useDraftRecovery(engine, { projectId: legacyProjectId })
 const baseUrl = import.meta.env.BASE_URL
 const aiOpen = ref(true)
 const healthCheckDialogVisible = ref(false)
 const apiKey = ref('')
 const dataServerBaseUrl = import.meta.env.VITE_API_DATA_SERVER?.trim().replace(/\/+$/, '') ?? ''
 const workspaceId = ref('')
+const projects = ref<WorkspaceProject[]>([])
+const projectRepository = ref<ReturnType<typeof createProjectRepository>>()
 const artifactRepository = ref<ArtifactRepository>()
 const shaderLibraryRepository = ref<ShaderLibraryRepository>()
 const workspaceLoading = ref(false)
 const workspaceError = ref('')
+const currentProject = ref<WorkspaceProject>()
+const projectsLoading = ref(false)
+const projectDialogVisible = ref(false)
+const projectDialogMode = ref<'create' | 'rename'>('create')
+const projectName = ref('')
 const apiKeyEditorOpen = ref(!apiKey.value)
 const agentBaseUrl = import.meta.env.VITE_API_AGENT?.trim().replace(/\/+$/, '') ?? ''
 const aiEnabled = Boolean(agentBaseUrl)
@@ -416,6 +452,11 @@ async function connectDataServer(key: string) {
   artifactRepository.value = undefined
   shaderLibraryRepository.value = undefined
   workspaceError.value = ''
+  currentProject.value = undefined
+  projects.value = []
+  projectRepository.value = undefined
+  projectId.value = legacyProjectId
+  draftManager.clearSync()
   if (!key || !dataServerBaseUrl) return
   workspaceLoading.value = true
   try {
@@ -426,14 +467,117 @@ async function connectDataServer(key: string) {
     }
     const workspaceRepository = createWorkspaceRepository(options)
     const workspace = await workspaceRepository.ensurePersonal()
+    const projectApi = createProjectRepository(options)
+    projectsLoading.value = true
+    const defaultProject = await projectApi.ensureDefault(workspace.id)
+    const projectList = await projectApi.list(workspace.id)
+    projects.value = projectList
+    projectRepository.value = projectApi
+    currentProject.value = defaultProject
+    const autosaveIdMap = {
+      [legacyAutosaveId]: `${engine.resourceNamespace}:autosave:${encodeURIComponent(defaultProject.id)}`,
+    }
+    const migratedCount = (
+      await draftRecovery.migrateProject(engine.resourceNamespace, defaultProject.id, { draftIdMap: autosaveIdMap })
+    ) + (
+      await draftRecovery.migrateProject(legacyProjectId, defaultProject.id, { draftIdMap: autosaveIdMap })
+    )
     workspaceId.value = workspace.id
     artifactRepository.value = createArtifactHttpRepository(options)
     shaderLibraryRepository.value = createShaderLibraryRepository(options)
+    draftManager.configureSync({
+      remote: createDraftHttpAdapter(options),
+      context: {
+        scopeKey: workspace.id,
+        projectId: defaultProject.id,
+      },
+    })
+    projectId.value = defaultProject.id
+    await draftRecovery.setProjectId(defaultProject.id)
+    if (migratedCount > 0) ElMessage.info(`已将 ${migratedCount} 个本地草稿迁移到默认项目`)
   } catch (error) {
     workspaceError.value = error instanceof Error ? error.message : String(error)
     ElMessage.warning(`数据服务连接失败：${workspaceError.value}`)
   } finally {
+    projectsLoading.value = false
     workspaceLoading.value = false
+  }
+}
+
+async function switchProject(nextProjectId: string) {
+  const next = projects.value.find(project => project.id === nextProjectId)
+  if (!next || next.id === currentProject.value?.id || !workspaceId.value || !projectRepository.value) return
+  const previous = currentProject.value
+  projectsLoading.value = true
+  try {
+    await draftRecovery.saveNow()
+    draftManager.clearSync()
+    projectId.value = next.id
+    currentProject.value = next
+    draftManager.configureSync({
+      remote: createDraftHttpAdapter({
+        baseUrl: dataServerBaseUrl,
+        getAccessToken: () => apiKey.value,
+        authorizationScheme: 'Api-Key' as const,
+      }),
+      context: { scopeKey: workspaceId.value, projectId: next.id },
+    })
+    await draftRecovery.setProjectId(next.id)
+    await draftRecovery.refreshDrafts()
+  } catch (error) {
+    projectId.value = previous?.id ?? projectId.value
+    currentProject.value = previous
+    ElMessage.error(`切换项目失败：${error instanceof Error ? error.message : String(error)}`)
+  } finally {
+    projectsLoading.value = false
+  }
+}
+
+function openProjectCreate() {
+  projectDialogMode.value = 'create'
+  projectName.value = ''
+  projectDialogVisible.value = true
+}
+
+function openProjectRename() {
+  if (!currentProject.value) return
+  projectDialogMode.value = 'rename'
+  projectName.value = currentProject.value.name
+  projectDialogVisible.value = true
+}
+
+async function submitProjectDialog() {
+  const name = projectName.value.trim()
+  if (!name || !workspaceId.value || !projectRepository.value) return
+  projectsLoading.value = true
+  try {
+    const next = projectDialogMode.value === 'create'
+      ? await projectRepository.value.create(workspaceId.value, { name })
+      : await projectRepository.value.update(workspaceId.value, currentProject.value!.id, { name })
+    projects.value = projectDialogMode.value === 'create'
+      ? [...projects.value, next]
+      : projects.value.map(project => project.id === next.id ? next : project)
+    projectDialogVisible.value = false
+    if (projectDialogMode.value === 'create') await switchProject(next.id)
+    else currentProject.value = next
+  } catch (error) {
+    ElMessage.error(`项目操作失败：${error instanceof Error ? error.message : String(error)}`)
+  } finally {
+    projectsLoading.value = false
+  }
+}
+
+async function removeCurrentProject() {
+  const current = currentProject.value
+  if (!current || current.isDefault || !projectRepository.value || !workspaceId.value) return
+  if (!window.confirm(`确定删除项目“${current.name}”吗？`)) return
+  try {
+    await projectRepository.value.remove(workspaceId.value, current.id)
+    projects.value = projects.value.filter(project => project.id !== current.id)
+    const fallback = projects.value.find(project => project.isDefault) ?? projects.value[0]
+    if (fallback) await switchProject(fallback.id)
+  } catch (error) {
+    ElMessage.error(`删除项目失败：${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
