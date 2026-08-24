@@ -187,6 +187,13 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ArrowDown, Check, CircleCheck, Cpu, Loading, Lock, MagicStick, Moon, Sunny, Tools, VideoPlay } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import {
+  createArtifactHttpRepository,
+  createShaderLibraryRepository,
+  createWorkspaceRepository,
+  type ArtifactRepository,
+  type ShaderLibraryRepository,
+} from '@aoles-gl/core'
+import {
   AolesProvider,
   ControllerPreview,
   AttributeContainer,
@@ -221,6 +228,12 @@ const baseUrl = import.meta.env.BASE_URL
 const aiOpen = ref(true)
 const healthCheckDialogVisible = ref(false)
 const apiKey = ref('')
+const dataServerBaseUrl = import.meta.env.VITE_API_DATA_SERVER?.trim().replace(/\/+$/, '') ?? ''
+const workspaceId = ref('')
+const artifactRepository = ref<ArtifactRepository>()
+const shaderLibraryRepository = ref<ShaderLibraryRepository>()
+const workspaceLoading = ref(false)
+const workspaceError = ref('')
 const apiKeyEditorOpen = ref(!apiKey.value)
 const agentBaseUrl = import.meta.env.VITE_API_AGENT?.trim().replace(/\/+$/, '') ?? ''
 const aiEnabled = Boolean(agentBaseUrl)
@@ -276,13 +289,23 @@ watch(() => draftRecovery.report.value, (report) => {
   ElMessage.warning(`草稿恢复失败。${report.error ?? ''}${missing}`.trim())
 })
 
-const aiConfig: VueAolesAiConfig & { storageKey: string } = {
+const aiConfig = computed<VueAolesAiConfig & { storageKey: string }>(() => ({
   endpoint: aiEndpoint,
   storageKey: 'aoles-gl-vue-demo:ai-sessions',
   getModelProfile: () => aiProfile.value,
   headers: () => apiKey.value
     ? { Authorization: `Api-Key ${apiKey.value}` }
     : {},
+  ...(workspaceId.value && artifactRepository.value && shaderLibraryRepository.value ? {
+    shaderDesign: {
+      register: true,
+      artifactPersistence: {
+        workspaceId: workspaceId.value,
+        repository: artifactRepository.value,
+        shaderLibrary: shaderLibraryRepository.value,
+      },
+    },
+  } : {}),
   getAssets: () => resourceState.resources.value
     .filter(resource => (
       resource.status === 'ready'
@@ -316,7 +339,7 @@ const aiConfig: VueAolesAiConfig & { storageKey: string } = {
       ElMessage.error(`AI 请求失败：${message}`)
     }
   },
-}
+}))
 
 function isAiModelProfile(value: unknown): value is AolesAiModelProfile {
   return typeof value === 'string'
@@ -388,6 +411,32 @@ function saveAiApiKey(value: string) {
   if (!keyChanged) void loadAiProfiles()
 }
 
+async function connectDataServer(key: string) {
+  workspaceId.value = ''
+  artifactRepository.value = undefined
+  shaderLibraryRepository.value = undefined
+  workspaceError.value = ''
+  if (!key || !dataServerBaseUrl) return
+  workspaceLoading.value = true
+  try {
+    const options = {
+      baseUrl: dataServerBaseUrl,
+      getAccessToken: () => apiKey.value,
+      authorizationScheme: 'Api-Key' as const,
+    }
+    const workspaceRepository = createWorkspaceRepository(options)
+    const workspace = await workspaceRepository.ensurePersonal()
+    workspaceId.value = workspace.id
+    artifactRepository.value = createArtifactHttpRepository(options)
+    shaderLibraryRepository.value = createShaderLibraryRepository(options)
+  } catch (error) {
+    workspaceError.value = error instanceof Error ? error.message : String(error)
+    ElMessage.warning(`数据服务连接失败：${workspaceError.value}`)
+  } finally {
+    workspaceLoading.value = false
+  }
+}
+
 function clearAiApiKey() {
   apiKey.value = ''
   apiKeyEditorOpen.value = true
@@ -404,6 +453,7 @@ onMounted(() => {
 watch(() => pageStore.isDark, syncDocumentTheme)
 watch(apiKey, () => {
   void loadAiProfiles()
+  void connectDataServer(apiKey.value)
 }, { immediate: true })
 
 onBeforeUnmount(() => {
