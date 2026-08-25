@@ -84,10 +84,24 @@
         </div>
       </header>
 
+      <WorkspaceContextPanel
+        :workspace-id="workspaceId"
+        :workspace-name="workspaceName"
+        :workspace-role="workspaceRole"
+        :project-name="currentProject?.name ?? ''"
+        :draft-status="draftStatus"
+        :artifacts="cloudArtifacts"
+        :loading="cloudArtifactsLoading"
+        :error="cloudArtifactsError"
+        @refresh="loadCloudArtifacts"
+        @move="moveCloudArtifact"
+        @remove="removeCloudArtifact"
+      />
+
       <div class="main-content">
         <!-- 左侧资源面板 -->
         <div class="card-style resources-section">
-          <ResourceContainer extract-audio />
+          <ResourceContainer extract-audio :cloud-sync="resourceCloudSync" />
         </div>
 
         <!-- 右侧主区域 -->
@@ -209,6 +223,8 @@ import { ArrowDown, Check, CircleCheck, Cpu, Delete, Edit, Loading, Lock, MagicS
 import { ElMessage } from 'element-plus'
 import {
   createArtifactHttpRepository,
+  createArtifactResourceResolver,
+  createResourceCloudSyncController,
   createDraftHttpAdapter,
   createProjectRepository,
   createShaderLibraryRepository,
@@ -241,6 +257,7 @@ import {
 } from '@aoles-gl/vue/ai'
 import AiApiKeyConfig from './components/AiApiKeyConfig.vue'
 import DraftManagerDialog from './components/DraftManagerDialog.vue'
+import WorkspaceContextPanel from './components/WorkspaceContextPanel.vue'
 import { HealthCheckPanel } from '@aoles-gl/vue'
 
 const engine = useEngine()
@@ -252,21 +269,31 @@ const legacyProjectId = 'aoles-gl-vue-demo:project:default'
 const legacyAutosaveId = 'aoles-gl-vue-demo:autosave'
 const projectId = ref(legacyProjectId)
 const draftManager = getDraftManager(engine)
-const draftRecovery = useDraftRecovery(engine, { projectId: legacyProjectId })
 const baseUrl = import.meta.env.BASE_URL
 const aiOpen = ref(true)
 const healthCheckDialogVisible = ref(false)
 const apiKey = ref('')
 const dataServerBaseUrl = import.meta.env.VITE_API_DATA_SERVER?.trim().replace(/\/+$/, '') ?? ''
 const workspaceId = ref('')
+const workspaceName = ref('')
+const workspaceRole = ref('')
 const projects = ref<WorkspaceProject[]>([])
 const projectRepository = ref<ReturnType<typeof createProjectRepository>>()
 const artifactRepository = ref<ArtifactRepository>()
+const resourceCloudSync = ref<ReturnType<typeof createResourceCloudSyncController>>()
 const shaderLibraryRepository = ref<ShaderLibraryRepository>()
 const workspaceLoading = ref(false)
 const workspaceError = ref('')
 const currentProject = ref<WorkspaceProject>()
 const projectsLoading = ref(false)
+const cloudArtifacts = ref<import('@aoles-gl/core').ArtifactRecord[]>([])
+const cloudArtifactsLoading = ref(false)
+const cloudArtifactsError = ref('')
+const resourceResolver = async (reference: import('@aoles-gl/core').ResourceAssetReference, context: { projectId: string }) => {
+  if (!artifactRepository.value || !workspaceId.value) return null
+  return createArtifactResourceResolver({ repository: artifactRepository.value, workspaceId: workspaceId.value })(reference, context)
+}
+const draftRecovery = useDraftRecovery(engine, { projectId: legacyProjectId, resourceResolver })
 const projectDialogVisible = ref(false)
 const projectDialogMode = ref<'create' | 'rename'>('create')
 const projectName = ref('')
@@ -315,6 +342,13 @@ const aiProfileTooltip = computed(() => {
   if (!aiClientSelectable.value) return `服务端已锁定为${aiProfileLabels[aiProfile.value]}档`
   return '选择 AI 模型档位'
 })
+const draftStatus = computed(() => {
+  const states = Object.values(draftRecovery.syncStates.value ?? {}) as Array<{ status?: string }>
+  if (states.some(state => state.status === 'conflict')) return '有冲突'
+  if (states.some(state => state.status === 'dirty' || state.status === 'syncing')) return '同步中'
+  if (states.some(state => state.status === 'synced') || draftRecovery.drafts.value.length) return '已同步'
+  return '仅本地'
+})
 let aiProfilesRequestId = 0
 
 watch(() => draftRecovery.report.value, (report) => {
@@ -337,6 +371,8 @@ const aiConfig = computed<VueAolesAiConfig & { storageKey: string }>(() => ({
       register: true,
       artifactPersistence: {
         workspaceId: workspaceId.value,
+        projectId: projectId.value,
+        scope: 'project',
         repository: artifactRepository.value,
         shaderLibrary: shaderLibraryRepository.value,
       },
@@ -449,11 +485,15 @@ function saveAiApiKey(value: string) {
 
 async function connectDataServer(key: string) {
   workspaceId.value = ''
+  workspaceName.value = ''
+  workspaceRole.value = ''
   artifactRepository.value = undefined
+  resourceCloudSync.value = undefined
   shaderLibraryRepository.value = undefined
   workspaceError.value = ''
   currentProject.value = undefined
   projects.value = []
+  cloudArtifacts.value = []
   projectRepository.value = undefined
   projectId.value = legacyProjectId
   draftManager.clearSync()
@@ -483,7 +523,15 @@ async function connectDataServer(key: string) {
       await draftRecovery.migrateProject(legacyProjectId, defaultProject.id, { draftIdMap: autosaveIdMap })
     )
     workspaceId.value = workspace.id
+    workspaceName.value = workspace.name
+    workspaceRole.value = workspace.role
     artifactRepository.value = createArtifactHttpRepository(options)
+    resourceCloudSync.value = createResourceCloudSyncController({
+      manager: resourceState.manager,
+      repository: artifactRepository.value,
+      workspaceId: workspace.id,
+      projectId: defaultProject.id,
+    })
     shaderLibraryRepository.value = createShaderLibraryRepository(options)
     draftManager.configureSync({
       remote: createDraftHttpAdapter(options),
@@ -494,6 +542,7 @@ async function connectDataServer(key: string) {
     })
     projectId.value = defaultProject.id
     await draftRecovery.setProjectId(defaultProject.id)
+    await loadCloudArtifacts()
     if (migratedCount > 0) ElMessage.info(`已将 ${migratedCount} 个本地草稿迁移到默认项目`)
   } catch (error) {
     workspaceError.value = error instanceof Error ? error.message : String(error)
@@ -501,6 +550,22 @@ async function connectDataServer(key: string) {
   } finally {
     projectsLoading.value = false
     workspaceLoading.value = false
+  }
+}
+
+async function loadCloudArtifacts() {
+  if (!workspaceId.value || !projectId.value || !artifactRepository.value) {
+    cloudArtifacts.value = []
+    return
+  }
+  cloudArtifactsLoading.value = true
+  cloudArtifactsError.value = ''
+  try {
+    cloudArtifacts.value = (await artifactRepository.value.list(workspaceId.value, { projectId: projectId.value })).artifacts
+  } catch (error) {
+    cloudArtifactsError.value = error instanceof Error ? error.message : String(error)
+  } finally {
+    cloudArtifactsLoading.value = false
   }
 }
 
@@ -514,6 +579,14 @@ async function switchProject(nextProjectId: string) {
     draftManager.clearSync()
     projectId.value = next.id
     currentProject.value = next
+    resourceCloudSync.value = artifactRepository.value
+      ? createResourceCloudSyncController({
+        manager: resourceState.manager,
+        repository: artifactRepository.value,
+        workspaceId: workspaceId.value,
+        projectId: next.id,
+      })
+      : undefined
     draftManager.configureSync({
       remote: createDraftHttpAdapter({
         baseUrl: dataServerBaseUrl,
@@ -524,12 +597,38 @@ async function switchProject(nextProjectId: string) {
     })
     await draftRecovery.setProjectId(next.id)
     await draftRecovery.refreshDrafts()
+    await loadCloudArtifacts()
   } catch (error) {
     projectId.value = previous?.id ?? projectId.value
     currentProject.value = previous
     ElMessage.error(`切换项目失败：${error instanceof Error ? error.message : String(error)}`)
   } finally {
     projectsLoading.value = false
+  }
+}
+
+async function moveCloudArtifact(artifact: import('@aoles-gl/core').ArtifactRecord) {
+  if (!workspaceId.value || !artifactRepository.value || !projectId.value) return
+  try {
+    const updated = await artifactRepository.value.updateScope(workspaceId.value, artifact.id, artifact.scope === 'workspace'
+      ? { scope: 'project', projectId: projectId.value }
+      : { scope: 'workspace' })
+    cloudArtifacts.value = cloudArtifacts.value.map(item => item.id === updated.id ? updated : item)
+    ElMessage.success(updated.scope === 'workspace' ? '资源已转为 Workspace 共享' : '资源已归属当前项目')
+  } catch (error) {
+    const status = (error as { status?: number }).status
+    ElMessage.error(status === 409 ? '资源仍被项目 Shader 引用，暂不能迁移' : `资源迁移失败：${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+async function removeCloudArtifact(artifact: import('@aoles-gl/core').ArtifactRecord) {
+  if (!workspaceId.value || !artifactRepository.value) return
+  try {
+    await artifactRepository.value.remove(workspaceId.value, artifact.id)
+    cloudArtifacts.value = cloudArtifacts.value.filter(item => item.id !== artifact.id)
+    ElMessage.success('云端资源已删除')
+  } catch (error) {
+    ElMessage.error(`删除资源失败：${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
@@ -577,7 +676,10 @@ async function removeCurrentProject() {
     const fallback = projects.value.find(project => project.isDefault) ?? projects.value[0]
     if (fallback) await switchProject(fallback.id)
   } catch (error) {
-    ElMessage.error(`删除项目失败：${error instanceof Error ? error.message : String(error)}`)
+    const status = (error as { status?: number }).status
+    ElMessage.error(status === 409
+      ? '该项目仍有项目资源或项目 Shader，请先迁移资源到其他项目或 Workspace 共享后再删除'
+      : `删除项目失败：${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
@@ -682,6 +784,42 @@ html.dark body {
 .header-actions {
   gap: 12px;
 }
+
+.workspace-context-panel {
+  flex-shrink: 0;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--aoles-color-border);
+  border-radius: var(--aoles-panel-radius);
+  background: var(--aoles-color-surface);
+}
+.workspace-context-heading,
+.workspace-context-tree,
+.workspace-context-meta,
+.cloud-resource-toolbar,
+.cloud-resource-actions {
+  display: flex;
+  align-items: center;
+}
+.workspace-context-heading { justify-content: space-between; gap: 12px; }
+.workspace-context-heading > div { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.workspace-context-heading strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.context-eyebrow { color: var(--aoles-color-text-muted); font-size: 11px; text-transform: uppercase; }
+.context-role { color: var(--aoles-color-text-muted); font-size: 11px; }
+.workspace-context-tree { gap: 7px; margin-top: 8px; font-size: 12px; }
+.context-branch { color: var(--aoles-color-text-muted); }
+.context-node { padding: 3px 7px; border-radius: 5px; }
+.context-node-workspace { color: #075985; background: #e0f2fe; }
+.context-node-project { color: #166534; background: #dcfce7; }
+.context-node-draft { color: #92400e; background: #fef3c7; }
+.workspace-context-meta { flex-wrap: wrap; gap: 12px; margin-top: 8px; color: var(--aoles-color-text-muted); font-size: 11px; }
+.cloud-resource-toolbar { justify-content: space-between; margin-bottom: 12px; color: var(--aoles-color-text-muted); font-size: 12px; }
+.cloud-resource-list { max-height: 52vh; overflow-y: auto; }
+.cloud-resource-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--aoles-color-border); }
+.cloud-resource-copy { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
+.cloud-resource-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-resource-copy span, .cloud-resource-copy small { color: var(--aoles-color-text-muted); font-size: 12px; }
+.cloud-resource-actions { flex-shrink: 0; gap: 8px; }
 
 .export-progress-wrap {
   display: flex;

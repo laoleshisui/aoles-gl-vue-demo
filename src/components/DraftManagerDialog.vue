@@ -25,6 +25,7 @@
 
     <div class="draft-sync-row">
       <span :class="['draft-sync-status', `is-${syncStatus}`]">{{ syncStatusLabel }}</span>
+      <span v-if="recovery.pendingSyncCount?.value">待同步 {{ recovery.pendingSyncCount.value }}</span>
       <el-button size="small" :loading="syncing" @click="syncNow">同步云端</el-button>
     </div>
 
@@ -33,7 +34,28 @@
       <div v-for="draft in drafts" :key="draft.draftId" class="draft-list-item">
         <div class="draft-list-copy">
           <div class="draft-list-title">
-            <strong>{{ draft.title || (isAutosave(draft.draftId) ? '自动保存' : '未命名草稿') }}</strong>
+            <template v-if="editingDraftId === draft.draftId">
+              <el-input
+                v-model="editingTitle"
+                size="small"
+                maxlength="80"
+                aria-label="草稿名称"
+                @keyup.enter="renameDraft(draft.draftId)"
+              />
+              <el-button :icon="Check" circle aria-label="保存名称" @click="renameDraft(draft.draftId)" />
+              <el-button :icon="Close" circle aria-label="取消重命名" @click="cancelRename" />
+            </template>
+            <template v-else>
+              <strong>{{ draft.title || (isAutosave(draft.draftId) ? '自动保存' : '未命名草稿') }}</strong>
+              <el-button
+                v-if="!isAutosave(draft.draftId)"
+                :icon="Edit"
+                link
+                title="重命名草稿"
+                aria-label="重命名草稿"
+                @click="startRename(draft)"
+              />
+            </template>
             <el-tag v-if="isAutosave(draft.draftId)" size="small" type="primary">自动</el-tag>
           </div>
           <span>
@@ -85,7 +107,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Delete, Document, FolderChecked, FolderOpened, Refresh } from '@element-plus/icons-vue'
+import { Check, Close, Delete, Document, Edit, FolderChecked, FolderOpened, Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const props = defineProps<{ recovery: any }>()
@@ -95,6 +117,8 @@ const saving = ref(false)
 const busyDraftId = ref('')
 const syncing = ref(false)
 const syncStates = ref<Record<string, any>>({})
+const editingDraftId = ref('')
+const editingTitle = ref('')
 const drafts = computed(() => props.recovery.drafts.value)
 
 const syncState = (draftId: string) => syncStates.value[draftId]
@@ -127,6 +151,26 @@ watch(visible, open => {
 
 const isAutosave = (draftId: string) => draftId === (props.recovery.autosaveDraftId?.value ?? props.recovery.autosaveDraftId)
 const formatDate = (value: number) => new Date(value).toLocaleString()
+
+function startRename(draft: any) {
+  editingDraftId.value = draft.draftId
+  editingTitle.value = draft.title ?? ''
+}
+
+function cancelRename() {
+  editingDraftId.value = ''
+  editingTitle.value = ''
+}
+
+async function renameDraft(draftId: string) {
+  try {
+    await props.recovery.renameDraft(draftId, editingTitle.value)
+    cancelRename()
+    ElMessage.success('草稿名称已更新')
+  } catch (error) {
+    ElMessage.error(`重命名失败：${error instanceof Error ? error.message : String(error)}`)
+  }
+}
 
 async function refresh() {
   try {
