@@ -542,6 +542,10 @@ async function connectDataServer(key: string) {
     })
     projectId.value = defaultProject.id
     await draftRecovery.setProjectId(defaultProject.id)
+    await resourceState.manager.ready
+    // Reconnect local resources to ready artifacts by digest/size. This is a
+    // metadata-only pass and never uploads files during page initialization.
+    await resourceCloudSync.value.reconcile()
     await loadCloudArtifacts()
     if (migratedCount > 0) ElMessage.info(`已将 ${migratedCount} 个本地草稿迁移到默认项目`)
   } catch (error) {
@@ -596,6 +600,8 @@ async function switchProject(nextProjectId: string) {
       context: { scopeKey: workspaceId.value, projectId: next.id },
     })
     await draftRecovery.setProjectId(next.id)
+    await resourceState.manager.ready
+    await resourceCloudSync.value?.reconcile()
     await draftRecovery.refreshDrafts()
     await loadCloudArtifacts()
   } catch (error) {
