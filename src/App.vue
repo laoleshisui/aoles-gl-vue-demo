@@ -62,6 +62,9 @@
           >
             健康检查
           </el-button>
+          <el-button size="small" :icon="Grid" @click="skillMarketplaceOpen = true">
+            Skill
+          </el-button>
           <span
             class="runtime-status"
             :class="previewState.wasmRuntimeInited ? 'runtime-status-ready' : 'runtime-status-loading'"
@@ -213,13 +216,20 @@
           <el-button type="primary" :loading="projectsLoading" @click="submitProjectDialog">确定</el-button>
         </template>
       </el-dialog>
+
+      <SkillMarketplaceDialog
+        :open="skillMarketplaceOpen"
+        :data-server-base-url="dataServerBaseUrl"
+        :api-key="apiKey"
+        @close="skillMarketplaceOpen = false"
+      />
     </div>
   </AolesProvider>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { ArrowDown, Check, CircleCheck, Cpu, Delete, Edit, Loading, Lock, MagicStick, Moon, Plus, Sunny, Tools, VideoPlay } from '@element-plus/icons-vue'
+import { ArrowDown, Check, CircleCheck, Cpu, Delete, Edit, Grid, Loading, Lock, MagicStick, Moon, Plus, Sunny, Tools, VideoPlay } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import {
   createArtifactHttpRepository,
@@ -258,6 +268,7 @@ import {
 import AiApiKeyConfig from './components/AiApiKeyConfig.vue'
 import DraftManagerDialog from './components/DraftManagerDialog.vue'
 import WorkspaceContextPanel from './components/WorkspaceContextPanel.vue'
+import SkillMarketplaceDialog from './components/SkillMarketplaceDialog.vue'
 import { HealthCheckPanel } from '@aoles-gl/vue'
 
 const engine = useEngine()
@@ -272,6 +283,7 @@ const draftManager = getDraftManager(engine)
 const baseUrl = import.meta.env.BASE_URL
 const aiOpen = ref(true)
 const healthCheckDialogVisible = ref(false)
+const skillMarketplaceOpen = ref(false)
 const apiKey = ref('')
 const dataServerBaseUrl = import.meta.env.VITE_API_DATA_SERVER?.trim().replace(/\/+$/, '') ?? ''
 const workspaceId = ref('')
