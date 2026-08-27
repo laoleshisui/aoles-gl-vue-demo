@@ -21,7 +21,7 @@ pnpm dev
 
 ## AI 助手
 
-Demo 右侧集成了 `@aoles-gl/vue/ai`。本地启动 Hono 服务后，在
+Demo 右侧集成了 `@aoles-gl/vue/ai`，档位选择器由 package 内置提供。本地启动 Hono 服务后，在
 `.env.development.local` 中配置服务地址：
 
 ```env
@@ -33,10 +33,9 @@ AI 请求会发送到 `${VITE_API_AGENT}/api/chat`。独立 Demo 没有登录页
 `Authorization: Api-Key <key>`。API-Key 只保存在当前页面内存中，刷新或
 关闭页面后自动清除，也不会写入 Web Storage 或 Vite 环境变量。
 
-鉴权成功后，聊天输入框底部会显示当前 AI 模型档位。点击档位按钮可从小型
-弹出菜单中切换服务端允许的档位。Demo 从 `${VITE_API_AGENT}/api/ai/profiles`
-读取档位，并在每次聊天请求中携带当前选择；若服务端关闭客户端选档，按钮
-会显示服务端默认档位并锁定。
+鉴权成功后，聊天输入框底部会显示由 `@aoles-gl/vue/ai` 提供的 AI 模型档位。
+点击档位按钮可从小型弹出菜单中切换服务端允许的档位；若服务端关闭客户端
+选档，按钮会显示服务端默认档位并锁定。
 
 独立 Demo 仅支持 API-Key，不读取宿主页面的 JWT 登录状态。
 

@@ -137,57 +137,7 @@
               @cancel="apiKeyEditorOpen = false"
               @clear="clearAiApiKey"
             />
-            <AolesAiPanel v-if="aiAuthenticated" :config="aiConfig">
-              <template #composer-tools>
-                <el-tooltip
-                  :content="aiProfileTooltip"
-                  placement="top"
-                  :show-after="300"
-                  :disabled="aiProfileMenuEnabled"
-                >
-                  <el-dropdown
-                    trigger="click"
-                    placement="top-start"
-                    popper-class="ai-profile-popper"
-                    :teleported="false"
-                    :disabled="!aiProfileMenuEnabled"
-                    @command="selectAiProfile"
-                  >
-                    <button
-                      type="button"
-                      class="ai-profile-trigger"
-                      :class="{ disabled: !aiProfileMenuEnabled }"
-                      :aria-label="aiProfileTooltip"
-                      :aria-disabled="!aiProfileMenuEnabled"
-                    >
-                      <el-icon v-if="aiProfilesLoading" class="is-loading"><Loading /></el-icon>
-                      <el-icon v-else><Cpu /></el-icon>
-                      <span class="ai-profile-trigger-label">{{ aiProfileButtonLabel }}</span>
-                      <el-icon v-if="aiProfileMenuEnabled" class="ai-profile-chevron"><ArrowDown /></el-icon>
-                      <el-icon v-else-if="aiProfiles.length && !aiProfilesError"><Lock /></el-icon>
-                    </button>
-                    <template #dropdown>
-                      <el-dropdown-menu class="ai-profile-menu">
-                        <el-dropdown-item
-                          v-for="profile in aiProfiles"
-                          :key="profile.id"
-                          :command="profile.id"
-                          :class="{ active: profile.id === aiProfile }"
-                        >
-                          <span class="ai-profile-check">
-                            <el-icon v-if="profile.id === aiProfile"><Check /></el-icon>
-                          </span>
-                          <span class="ai-profile-option-copy">
-                            <strong>{{ aiProfileLabels[profile.id] }}</strong>
-                            <small>{{ aiProfileDescriptions[profile.id] }}</small>
-                          </span>
-                        </el-dropdown-item>
-                      </el-dropdown-menu>
-                    </template>
-                  </el-dropdown>
-                </el-tooltip>
-              </template>
-            </AolesAiPanel>
+            <AolesAiPanel v-if="aiAuthenticated" :config="aiConfig" />
           </div>
           <div v-else class="ai-unavailable">
             <strong>AI 助手尚未配置</strong>
@@ -229,7 +179,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { ArrowDown, Check, CircleCheck, Cpu, Delete, Edit, Grid, Loading, Lock, MagicStick, Moon, Plus, Sunny, Tools, VideoPlay } from '@element-plus/icons-vue'
+import { CircleCheck, Delete, Edit, Grid, Loading, MagicStick, Moon, Plus, Sunny, Tools, VideoPlay } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import {
   createArtifactHttpRepository,
@@ -260,9 +210,6 @@ import {
 } from '@aoles-gl/vue'
 import {
   AolesAiPanel,
-  type AolesAiModelProfile,
-  type AolesAiProfileInfo,
-  type AolesAiProfilesResponse,
   type VueAolesAiConfig,
 } from '@aoles-gl/vue/ai'
 import AiApiKeyConfig from './components/AiApiKeyConfig.vue'
@@ -317,43 +264,6 @@ const aiAuthLabel = 'API-Key（当前标签页）'
 const aiEndpoint = agentBaseUrl.endsWith('/api/chat')
   ? agentBaseUrl
   : `${agentBaseUrl}/api/chat`
-const aiProfilesEndpoint = `${aiEndpoint.slice(0, -'/api/chat'.length)}/api/ai/profiles`
-const aiProfile = ref<AolesAiModelProfile>('balanced')
-const aiProfiles = ref<AolesAiProfileInfo[]>([])
-const aiProfilesLoading = ref(false)
-const aiProfilesError = ref('')
-const aiClientSelectable = ref(false)
-const aiProfileLabels = {
-  fast: '快速',
-  balanced: '均衡',
-  reasoning: '深度',
-  media: '多媒体',
-} satisfies Record<AolesAiModelProfile, string>
-const aiProfileDescriptions = {
-  fast: '低延迟，适合简单操作',
-  balanced: '速度与质量均衡',
-  reasoning: '适合复杂编辑任务',
-  media: '侧重图片与视频理解',
-} satisfies Record<AolesAiModelProfile, string>
-const aiProfileMenuEnabled = computed(() => (
-  aiClientSelectable.value
-  && !aiProfilesLoading.value
-  && !aiProfilesError.value
-  && aiProfiles.value.length > 0
-))
-const aiProfileButtonLabel = computed(() => {
-  if (aiProfilesLoading.value) return '读取档位'
-  if (aiProfilesError.value) return '档位不可用'
-  if (!aiProfiles.value.length) return '暂无档位'
-  return aiProfileLabels[aiProfile.value]
-})
-const aiProfileTooltip = computed(() => {
-  if (aiProfilesLoading.value) return '正在读取服务端档位配置'
-  if (aiProfilesError.value) return '档位加载失败，请更换 API-Key 后重试'
-  if (!aiProfiles.value.length) return '服务端未提供可用档位'
-  if (!aiClientSelectable.value) return `服务端已锁定为${aiProfileLabels[aiProfile.value]}档`
-  return '选择 AI 模型档位'
-})
 const draftStatus = computed(() => {
   const states = Object.values(draftRecovery.syncStates.value ?? {}) as Array<{ status?: string }>
   if (states.some(state => state.status === 'conflict')) return '有冲突'
@@ -361,8 +271,6 @@ const draftStatus = computed(() => {
   if (states.some(state => state.status === 'synced') || draftRecovery.drafts.value.length) return '已同步'
   return '仅本地'
 })
-let aiProfilesRequestId = 0
-
 watch(() => draftRecovery.report.value, (report) => {
   if (!report || report.restored) return
   const missing = report.missingAssets.length
@@ -373,8 +281,8 @@ watch(() => draftRecovery.report.value, (report) => {
 
 const aiConfig = computed<VueAolesAiConfig & { storageKey: string }>(() => ({
   endpoint: aiEndpoint,
+  showModelProfileSelector: true,
   storageKey: 'aoles-gl-vue-demo:ai-sessions',
-  getModelProfile: () => aiProfile.value,
   headers: () => apiKey.value
     ? { Authorization: `Api-Key ${apiKey.value}` }
     : {},
@@ -425,74 +333,9 @@ const aiConfig = computed<VueAolesAiConfig & { storageKey: string }>(() => ({
   },
 }))
 
-function isAiModelProfile(value: unknown): value is AolesAiModelProfile {
-  return typeof value === 'string'
-    && Object.prototype.hasOwnProperty.call(aiProfileLabels, value)
-}
-
-function resetAiProfiles() {
-  aiProfile.value = 'balanced'
-  aiProfiles.value = []
-  aiProfilesLoading.value = false
-  aiProfilesError.value = ''
-  aiClientSelectable.value = false
-}
-
-function selectAiProfile(profile: AolesAiModelProfile) {
-  if (!aiProfileMenuEnabled.value || !isAiModelProfile(profile)) return
-  if (!aiProfiles.value.some(item => item.id === profile)) return
-  aiProfile.value = profile
-}
-
-async function loadAiProfiles() {
-  const requestId = ++aiProfilesRequestId
-  const key = apiKey.value
-  if (!key) {
-    resetAiProfiles()
-    return
-  }
-
-  aiProfilesLoading.value = true
-  aiProfilesError.value = ''
-  try {
-    const response = await fetch(aiProfilesEndpoint, {
-      headers: { Authorization: `Api-Key ${key}` },
-    })
-    if (!response.ok) throw new Error(`HTTP ${response.status}`)
-
-    const payload = await response.json() as Partial<AolesAiProfilesResponse>
-    const profiles = Array.isArray(payload.profiles)
-      ? payload.profiles.filter(profile => isAiModelProfile(profile?.id))
-      : []
-    if (!profiles.length) throw new Error('服务端没有返回可用的 AI 模型档位')
-    if (requestId !== aiProfilesRequestId) return
-
-    const defaultProfile = isAiModelProfile(payload.defaultProfile)
-      && profiles.some(profile => profile.id === payload.defaultProfile)
-      ? payload.defaultProfile
-      : profiles[0].id
-    aiProfiles.value = profiles
-    aiClientSelectable.value = payload.clientSelectable === true
-    aiProfile.value = aiClientSelectable.value
-      && profiles.some(profile => profile.id === aiProfile.value)
-      ? aiProfile.value
-      : defaultProfile
-  } catch (error) {
-    if (requestId !== aiProfilesRequestId) return
-    aiProfiles.value = []
-    aiClientSelectable.value = false
-    aiProfilesError.value = error instanceof Error ? error.message : String(error)
-    ElMessage.warning('AI 模型档位加载失败，请检查服务地址和 API-Key。')
-  } finally {
-    if (requestId === aiProfilesRequestId) aiProfilesLoading.value = false
-  }
-}
-
 function saveAiApiKey(value: string) {
-  const keyChanged = apiKey.value !== value
   apiKey.value = value
   apiKeyEditorOpen.value = false
-  if (!keyChanged) void loadAiProfiles()
 }
 
 async function connectDataServer(key: string) {
@@ -716,12 +559,10 @@ onMounted(() => {
 
 watch(() => pageStore.isDark, syncDocumentTheme)
 watch(apiKey, () => {
-  void loadAiProfiles()
   void connectDataServer(apiKey.value)
 }, { immediate: true })
 
 onBeforeUnmount(() => {
-  aiProfilesRequestId += 1
   document.documentElement.classList.remove('dark')
 })
 
@@ -942,107 +783,6 @@ html.dark body {
 .ai-panel-shell > .aoles-ai-panel {
   min-height: 0;
   flex: 1;
-}
-
-.ai-profile-trigger {
-  display: inline-flex;
-  min-width: 0;
-  max-width: 180px;
-  height: 28px;
-  align-items: center;
-  gap: 5px;
-  padding: 0 8px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--aoles-color-text-muted);
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-  transition: background-color var(--aoles-motion-duration), color var(--aoles-motion-duration);
-}
-
-.ai-profile-trigger:not(.disabled):hover {
-  color: var(--aoles-color-text);
-  background: var(--aoles-color-surface-muted);
-}
-
-.ai-profile-trigger.disabled {
-  cursor: default;
-  opacity: .7;
-}
-
-.ai-profile-trigger-label {
-  overflow: hidden;
-  min-width: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ai-profile-chevron {
-  font-size: 11px;
-}
-
-.ai-profile-menu {
-  min-width: 218px;
-  padding: 4px;
-  color: var(--aoles-color-text);
-  background: transparent;
-}
-
-.ai-profile-popper.el-popper {
-  border-color: var(--aoles-color-border);
-  background: var(--aoles-color-surface-raised);
-  box-shadow: var(--aoles-shadow-panel);
-}
-
-.ai-profile-popper.el-popper .el-popper__arrow::before {
-  border-color: var(--aoles-color-border);
-  background: var(--aoles-color-surface-raised);
-}
-
-.ai-profile-menu .el-dropdown-menu__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border-radius: 5px;
-  line-height: 1.2;
-}
-
-.ai-profile-menu .el-dropdown-menu__item.active {
-  color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-}
-
-.ai-profile-menu .el-dropdown-menu__item:not(.is-disabled):focus,
-.ai-profile-menu .el-dropdown-menu__item:not(.is-disabled):hover {
-  color: var(--aoles-color-text);
-  background: var(--aoles-color-surface-muted);
-}
-
-.ai-profile-check {
-  display: inline-flex;
-  width: 14px;
-  flex-shrink: 0;
-}
-
-.ai-profile-option-copy {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.ai-profile-option-copy strong {
-  color: inherit;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.ai-profile-option-copy small {
-  color: var(--aoles-color-text-muted);
-  font-size: 11px;
 }
 
 .ai-unavailable {
