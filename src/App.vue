@@ -127,15 +127,14 @@
 
         <aside v-if="aiOpen" class="ai-section">
           <div v-if="aiEnabled" class="ai-panel-shell">
-            <AiApiKeyConfig
-              :configured="Boolean(apiKey)"
-              :authenticated="aiAuthenticated"
-              :expanded="apiKeyEditorOpen || !aiAuthenticated"
-              :auth-label="aiAuthLabel"
-              @save="saveAiApiKey"
-              @edit="apiKeyEditorOpen = true"
-              @cancel="apiKeyEditorOpen = false"
-              @clear="clearAiApiKey"
+            <AolesLogin
+              :client="apiKeyAuthClient"
+              default-mode="api-key"
+              :modes="['api-key']"
+              :social-providers="[]"
+              title="连接 PixoClip AI"
+              subtitle="使用 API Key 连接 AI 与数据服务"
+              @success="handleApiKeyLogin"
             />
             <AolesAiPanel v-if="aiAuthenticated" :config="aiConfig" />
           </div>
@@ -207,12 +206,13 @@ import {
   usePreviewState,
   useResourceState,
   useTrackState,
+  AolesLogin,
+  type AolesAuthClient,
 } from '@aoles-gl/vue'
 import {
   AolesAiPanel,
   type VueAolesAiConfig,
 } from '@aoles-gl/vue/ai'
-import AiApiKeyConfig from './components/AiApiKeyConfig.vue'
 import DraftManagerDialog from './components/DraftManagerDialog.vue'
 import WorkspaceContextPanel from './components/WorkspaceContextPanel.vue'
 import SkillMarketplaceDialog from './components/SkillMarketplaceDialog.vue'
@@ -256,11 +256,23 @@ const draftRecovery = useDraftRecovery(engine, { projectId: legacyProjectId, res
 const projectDialogVisible = ref(false)
 const projectDialogMode = ref<'create' | 'rename'>('create')
 const projectName = ref('')
-const apiKeyEditorOpen = ref(!apiKey.value)
 const agentBaseUrl = import.meta.env.VITE_API_AGENT?.trim().replace(/\/+$/, '') ?? ''
 const aiEnabled = Boolean(agentBaseUrl)
 const aiAuthenticated = computed(() => Boolean(apiKey.value))
-const aiAuthLabel = 'API-Key（当前标签页）'
+const apiKeyAuthClient: AolesAuthClient = {
+  async sendCode() { throw new Error('当前 Demo 仅启用 API Key 登录') },
+  async loginPassword() { throw new Error('当前 Demo 仅启用 API Key 登录') },
+  async loginSms() { throw new Error('当前 Demo 仅启用 API Key 登录') },
+  async loginApiKey({ apiKey: value }) {
+    if (dataServerBaseUrl) {
+      const response = await fetch(`${dataServerBaseUrl}/api-keys/validate-header/`, {
+        headers: { Authorization: `Api-Key ${value}` },
+      })
+      if (!response.ok) throw new Error('API Key 无效、已过期或已被撤销')
+    }
+    return { accessToken: value }
+  },
+}
 const aiEndpoint = agentBaseUrl.endsWith('/api/chat')
   ? agentBaseUrl
   : `${agentBaseUrl}/api/chat`
@@ -333,9 +345,8 @@ const aiConfig = computed<VueAolesAiConfig & { storageKey: string }>(() => ({
   },
 }))
 
-function saveAiApiKey(value: string) {
-  apiKey.value = value
-  apiKeyEditorOpen.value = false
+function handleApiKeyLogin(session: { accessToken: string }) {
+  apiKey.value = session.accessToken
 }
 
 async function connectDataServer(key: string) {
@@ -542,11 +553,6 @@ async function removeCurrentProject() {
       ? '该项目仍有项目资源或项目 Shader，请先迁移资源到其他项目或 Workspace 共享后再删除'
       : `删除项目失败：${error instanceof Error ? error.message : String(error)}`)
   }
-}
-
-function clearAiApiKey() {
-  apiKey.value = ''
-  apiKeyEditorOpen.value = true
 }
 
 function syncDocumentTheme(isDark: boolean) {
