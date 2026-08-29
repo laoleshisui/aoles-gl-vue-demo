@@ -55,6 +55,7 @@
           >
             AI 助手
           </el-button>
+          <el-button size="small" :icon="Wallet" @click="paymentOpen = true">购买服务</el-button>
           <el-button
             size="small"
             :icon="Tools"
@@ -129,12 +130,13 @@
           <div v-if="aiEnabled" class="ai-panel-shell">
             <AolesLogin
               :client="apiKeyAuthClient"
-              default-mode="api-key"
-              :modes="['api-key']"
-              :social-providers="[]"
-              title="连接 PixoClip AI"
-              subtitle="使用 API Key 连接 AI 与数据服务"
-              @success="handleApiKeyLogin"
+              default-mode="sms"
+              :modes="['sms', 'api-key']"
+              :social-providers="['wechat']"
+              title="登录 PixoClip"
+              subtitle="使用手机号验证码或 API Key 连接数据服务"
+              @success="handleAuthLogin"
+              @social-login="handleSocialLogin"
             />
             <AolesAiPanel v-if="aiAuthenticated" :config="aiConfig" />
           </div>
@@ -170,7 +172,14 @@
         :open="skillMarketplaceOpen"
         :data-server-base-url="dataServerBaseUrl"
         :api-key="apiKey"
+        :authorization-scheme="authorizationScheme"
         @close="skillMarketplaceOpen = false"
+      />
+      <PaymentPanel
+        v-model="paymentOpen"
+        :data-server-base-url="dataServerBaseUrl"
+        :access-token="apiKey"
+        :authorization-scheme="authorizationScheme"
       />
     </div>
   </AolesProvider>
@@ -178,7 +187,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { CircleCheck, Delete, Edit, Grid, Loading, MagicStick, Moon, Plus, Sunny, Tools, VideoPlay } from '@element-plus/icons-vue'
+import { CircleCheck, Delete, Edit, Grid, Loading, MagicStick, Moon, Plus, Sunny, Tools, VideoPlay, Wallet } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import {
   createArtifactHttpRepository,
@@ -216,6 +225,7 @@ import {
 import DraftManagerDialog from './components/DraftManagerDialog.vue'
 import WorkspaceContextPanel from './components/WorkspaceContextPanel.vue'
 import SkillMarketplaceDialog from './components/SkillMarketplaceDialog.vue'
+import PaymentPanel from './components/PaymentPanel.vue'
 import { HealthCheckPanel } from '@aoles-gl/vue'
 
 const engine = useEngine()
@@ -231,7 +241,17 @@ const baseUrl = import.meta.env.BASE_URL
 const aiOpen = ref(true)
 const healthCheckDialogVisible = ref(false)
 const skillMarketplaceOpen = ref(false)
-const apiKey = ref('')
+const paymentOpen = ref(window.location.pathname.includes('/payment/result'))
+function restoreBearerSession() {
+  try {
+    const value = sessionStorage.getItem('aoles-vue-bearer-session')
+    const session = value ? JSON.parse(value) as { accessToken?: string; refreshToken?: string } : undefined
+    return session?.accessToken ? session : undefined
+  } catch { return undefined }
+}
+const restoredSession = restoreBearerSession()
+const apiKey = ref(restoredSession?.accessToken ?? '')
+const authorizationScheme = ref<'Bearer' | 'Api-Key'>(restoredSession ? 'Bearer' : 'Api-Key')
 const dataServerBaseUrl = import.meta.env.VITE_API_DATA_SERVER?.trim().replace(/\/+$/, '') ?? ''
 const workspaceId = ref('')
 const workspaceName = ref('')
@@ -259,10 +279,36 @@ const projectName = ref('')
 const agentBaseUrl = import.meta.env.VITE_API_AGENT?.trim().replace(/\/+$/, '') ?? ''
 const aiEnabled = Boolean(agentBaseUrl)
 const aiAuthenticated = computed(() => Boolean(apiKey.value))
+async function dataServerPost(path: string, body: Record<string, unknown>) {
+  if (!dataServerBaseUrl) throw new Error('未配置数据服务地址')
+  const response = await fetch(`${dataServerBaseUrl}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const payload = await response.json().catch(() => ({})) as Record<string, any>
+  if (!response.ok) {
+    throw new Error(payload.error || payload.detail || payload.message || `请求失败（${response.status}）`)
+  }
+  return payload
+}
+
 const apiKeyAuthClient: AolesAuthClient = {
-  async sendCode() { throw new Error('当前 Demo 仅启用 API Key 登录') },
+  async sendCode({ phone }) {
+    await dataServerPost('/aauth/sms/send/', { phone })
+  },
   async loginPassword() { throw new Error('当前 Demo 仅启用 API Key 登录') },
-  async loginSms() { throw new Error('当前 Demo 仅启用 API Key 登录') },
+  async loginSms({ phone, code }) {
+    const payload = await dataServerPost('/aauth/phone-register-user/', {
+      phone,
+      verification_code: code,
+    })
+    return {
+      ...payload,
+      accessToken: payload.access_token || payload.access,
+      refreshToken: payload.refresh_token || payload.refresh,
+    }
+  },
   async loginApiKey({ apiKey: value }) {
     if (dataServerBaseUrl) {
       const response = await fetch(`${dataServerBaseUrl}/api-keys/validate-header/`, {
@@ -296,7 +342,7 @@ const aiConfig = computed<VueAolesAiConfig & { storageKey: string }>(() => ({
   showModelProfileSelector: true,
   storageKey: 'aoles-gl-vue-demo:ai-sessions',
   headers: () => apiKey.value
-    ? { Authorization: `Api-Key ${apiKey.value}` }
+    ? { Authorization: `${authorizationScheme.value} ${apiKey.value}` }
     : {},
   ...(workspaceId.value && artifactRepository.value && shaderLibraryRepository.value ? {
     shaderDesign: {
@@ -345,8 +391,41 @@ const aiConfig = computed<VueAolesAiConfig & { storageKey: string }>(() => ({
   },
 }))
 
-function handleApiKeyLogin(session: { accessToken: string }) {
+function handleAuthLogin(session: { accessToken: string; refreshToken?: string }) {
+  authorizationScheme.value = session.refreshToken ? 'Bearer' : 'Api-Key'
   apiKey.value = session.accessToken
+  if (session.refreshToken) sessionStorage.setItem('aoles-vue-bearer-session', JSON.stringify(session))
+  else sessionStorage.removeItem('aoles-vue-bearer-session')
+}
+
+function handleSocialLogin(provider: string) {
+  if (provider !== 'wechat') return
+  if (!dataServerBaseUrl) {
+    ElMessage.error('未配置数据服务地址')
+    return
+  }
+  window.location.assign(`${dataServerBaseUrl}/aauth/oauth/wechat/start/`)
+}
+
+async function handleWechatCallback() {
+  const url = new URL(window.location.href)
+  if (!url.pathname.includes('/auth/wechat/callback')) return
+  const ticket = url.searchParams.get('ticket')
+  if (!ticket) {
+    ElMessage.error('微信登录票据缺失或已过期')
+    return
+  }
+  try {
+    const payload = await dataServerPost('/aauth/oauth/wechat/exchange/', { ticket })
+    const accessToken = payload.access_token || payload.access
+    const refreshToken = payload.refresh_token || payload.refresh
+    if (!accessToken) throw new Error('微信登录未返回访问令牌')
+    handleAuthLogin({ accessToken, refreshToken })
+    window.history.replaceState({}, '', `${url.origin}${url.pathname}`)
+    ElMessage.success('微信登录成功')
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '微信登录失败')
+  }
 }
 
 async function connectDataServer(key: string) {
@@ -369,7 +448,7 @@ async function connectDataServer(key: string) {
     const options = {
       baseUrl: dataServerBaseUrl,
       getAccessToken: () => apiKey.value,
-      authorizationScheme: 'Api-Key' as const,
+      authorizationScheme: authorizationScheme.value,
     }
     const workspaceRepository = createWorkspaceRepository(options)
     const workspace = await workspaceRepository.ensurePersonal()
@@ -461,7 +540,7 @@ async function switchProject(nextProjectId: string) {
       remote: createDraftHttpAdapter({
         baseUrl: dataServerBaseUrl,
         getAccessToken: () => apiKey.value,
-        authorizationScheme: 'Api-Key' as const,
+        authorizationScheme: authorizationScheme.value,
       }),
       context: { scopeKey: workspaceId.value, projectId: next.id },
     })
@@ -561,10 +640,11 @@ function syncDocumentTheme(isDark: boolean) {
 
 onMounted(() => {
   syncDocumentTheme(pageStore.isDark)
+  void handleWechatCallback()
 })
 
 watch(() => pageStore.isDark, syncDocumentTheme)
-watch(apiKey, () => {
+watch([apiKey, authorizationScheme], () => {
   void connectDataServer(apiKey.value)
 }, { immediate: true })
 

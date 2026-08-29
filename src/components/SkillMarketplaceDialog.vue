@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import {
   SkillMarketplace,
   createAolesSkillManager,
@@ -11,20 +11,21 @@ const props = defineProps<{
   open: boolean
   dataServerBaseUrl: string
   apiKey: string
+  authorizationScheme: 'Bearer' | 'Api-Key'
 }>()
 const emit = defineEmits<{ close: [] }>()
 
-const repository = createSkillHttpRepository({
+const repository = computed(() => createSkillHttpRepository({
   baseUrl: props.dataServerBaseUrl,
   getAccessToken: () => props.apiKey,
-  authorizationScheme: 'Api-Key',
-})
-const manager = createAolesSkillManager({
-  repository,
+  authorizationScheme: props.authorizationScheme,
+}))
+const manager = computed(() => createAolesSkillManager({
+  repository: repository.value,
   persistence: createAolesSkillPersistence('aoles-gl-vue-demo:skills'),
-})
+}))
 
-onMounted(() => { void manager.restore() })
+onMounted(() => { void manager.value.restore() })
 </script>
 
 <template>
@@ -44,7 +45,7 @@ onMounted(() => { void manager.restore() })
     <div v-else class="skill-marketplace-dialog__content">
       <div v-if="!apiKey" class="skill-marketplace-dialog__notice">
         <strong>当前为访客模式</strong>
-        <span>可以浏览和安装公开 Skill；配置 API-Key 后可使用“我的提交”和发布功能。</span>
+        <span>登录后可使用“我的提交”和发布功能。</span>
       </div>
       <SkillMarketplace :manager="manager" :repository="repository" />
     </div>
