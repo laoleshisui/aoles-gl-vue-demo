@@ -192,6 +192,7 @@ import { ElMessage } from 'element-plus'
 import {
   createArtifactHttpRepository,
   createArtifactResourceResolver,
+  createCloudResourceBrowser,
   createResourceCloudSyncController,
   createDraftHttpAdapter,
   createProjectRepository,
@@ -337,6 +338,20 @@ watch(() => draftRecovery.report.value, (report) => {
   ElMessage.warning(`草稿恢复失败。${report.error ?? ''}${missing}`.trim())
 })
 
+async function getImportArtifact(artifactId: string) {
+  if (!workspaceId.value || !projectId.value || !artifactRepository.value) {
+    throw new Error('请先选择 Workspace 和项目')
+  }
+  const artifact = await artifactRepository.value.get(workspaceId.value, artifactId)
+  if (!artifact || artifact.workspaceId !== workspaceId.value) {
+    throw new Error('云端素材不存在或无权访问')
+  }
+  if ((artifact.scope ?? 'project') === 'project' && artifact.projectId !== projectId.value) {
+    throw new Error('云端素材不属于当前项目')
+  }
+  return { scope: { workspaceId: workspaceId.value, projectId: projectId.value }, artifact }
+}
+
 const aiConfig = computed<VueAolesAiConfig & { storageKey: string }>(() => ({
   endpoint: aiEndpoint,
   showModelProfileSelector: true,
@@ -356,22 +371,35 @@ const aiConfig = computed<VueAolesAiConfig & { storageKey: string }>(() => ({
       },
     },
   } : {}),
-  getAssets: () => resourceState.resources.value
-    .filter(resource => (
-      resource.status === 'ready'
-      && (resource.type === 'video' || resource.type === 'audio' || resource.type === 'image')
-    ))
-    .map(resource => ({
-      id: resource.id,
-      type: resource.type,
-      prompt: resource.name,
-      urls: [{
-        id: resource.id,
-        url: resource.url,
-        origin_url: null,
-        ...resource.metadata,
-      }],
-    })),
+  getMediaContext: () => workspaceId.value
+    ? { workspaceId: workspaceId.value, ...(projectId.value ? { projectId: projectId.value } : {}) }
+    : undefined,
+  getMediaImportMetadata: async ({ artifactId }) => {
+    const { artifact } = await getImportArtifact(artifactId)
+    return {
+      artifactId: artifact.id,
+      name: artifact.name,
+      contentType: artifact.contentType,
+      byteSize: artifact.byteSize,
+      scope: artifact.scope ?? 'project',
+      projectId: artifact.projectId,
+    }
+  },
+  importMedia: async ({ artifactId }) => {
+    const { scope } = await getImportArtifact(artifactId)
+    const browser = createCloudResourceBrowser({
+      repository: artifactRepository.value!,
+      manager: resourceState.manager,
+      workspaceId: scope.workspaceId,
+      projectId: scope.projectId,
+    })
+    try {
+      const resource = await browser.importArtifactById(artifactId)
+      return { assetId: resource.id, name: resource.name, type: resource.type }
+    } finally {
+      browser.dispose()
+    }
+  },
   authorizeToolCall: ({ name }) => {
     if (name === 'removeClip' || name === 'removeTrack') {
       return window.confirm('允许 AI 助手删除编辑器内容吗？')
@@ -682,6 +710,7 @@ html.dark body {
 }
 
 .editor-root {
+  --demo-track-height: clamp(240px, 34vh, 380px);
   height: 100%;
   min-height: 0;
   display: flex;
@@ -824,6 +853,7 @@ html.dark body {
 .main-content {
   display: flex;
   flex: 1;
+  min-height: 0;
   flex-direction: row;
   overflow: hidden;
   gap: var(--aoles-panel-gap);
@@ -848,6 +878,7 @@ html.dark body {
   overflow: hidden;
   gap: var(--aoles-panel-gap);
   flex-grow: 1;
+  min-height: 0;
   min-width: 0;
 }
 
@@ -895,8 +926,10 @@ html.dark body {
 .preview-attr-row {
   display: flex;
   flex: 1;
+  min-height: 240px;
   flex-direction: row;
   flex-wrap: nowrap;
+  overflow: hidden;
   gap: var(--aoles-panel-gap);
 }
 
@@ -905,6 +938,8 @@ html.dark body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .attr-section {
@@ -913,23 +948,108 @@ html.dark body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
 }
 
 .track-section {
+  display: flex;
+  height: var(--demo-track-height);
+  min-height: 220px;
+  flex: 0 0 var(--demo-track-height);
   overflow: hidden;
+}
+
+.track-section > * {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+@media (max-height: 760px) and (min-width: 1025px) {
+  .editor-root {
+    --demo-track-height: clamp(210px, 38vh, 290px);
+  }
+
+  .preview-attr-row {
+    min-height: 200px;
+  }
 }
 
 /* 响应式 */
 @media (max-width: 1024px) {
-  .main-content,
+  .editor-root {
+    height: auto;
+    min-height: 100%;
+    overflow: auto;
+  }
+
+  .main-content {
+    min-height: 0;
+    flex: none;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .resources-section {
+    width: 100%;
+    height: 300px;
+  }
+
+  .right-section {
+    height: min(900px, 115vh);
+    min-height: 700px;
+    flex: none;
+  }
+
   .preview-attr-row {
-    flex-direction: column !important;
+    min-height: 380px;
+  }
+
+  .track-section {
+    height: 300px;
+    flex-basis: 300px;
   }
 
   .ai-section {
     width: 100%;
     min-width: 0;
     height: 420px;
+  }
+}
+
+@media (max-width: 720px) {
+  .editor-root {
+    padding: 8px;
+  }
+
+  .header-bar {
+    height: auto;
+    min-height: 44px;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .header-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .preview-attr-row {
+    flex-direction: column;
+  }
+
+  .preview-section,
+  .attr-section {
+    min-height: 280px;
+  }
+
+  .attr-section {
+    height: 320px;
+  }
+
+  .right-section {
+    height: 1240px;
   }
 }
 

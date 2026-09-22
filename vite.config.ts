@@ -7,6 +7,12 @@ export default defineConfig(({ command }) => ({
   resolve: {
     dedupe: ['vue', 'pinia'],
   },
+  optimizeDeps: {
+    // The editor package is linked from the workspace. Rebuild its graph when
+    // the linked dist changes so the attribute panel does not stay stale.
+    force: true,
+    include: ['@aoles-gl/core', '@aoles-gl/vue', '@aoles-gl/vue/ai'],
+  },
   server: {
     port: 4008,
     headers: {

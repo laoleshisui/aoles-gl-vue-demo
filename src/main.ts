@@ -18,8 +18,8 @@ import AolesGLVue, {
 // 引入 effects 包内打包的 GLSL URL resolver
 import { TEXT_EFFECTS, VIDEO_EFFECTS, resolveGlslUrl } from '@aoles-gl/effects'
 
-import controllerJs from '@aoles-gl/core/wasm/GLController.mjs?url'
-import controllerWasm from '@aoles-gl/core/wasm/GLController.wasm?url'
+import controllerJs from '@aoles-gl/core/wasm/WebGPUController.mjs?url'
+import controllerWasm from '@aoles-gl/core/wasm/WebGPUController.wasm?url'
 
 import App from './App.vue'
 
@@ -46,7 +46,7 @@ app.use(AolesGLVue)
 // 创建 Engine 实例并配置 WASM 路径
 const engine = new Engine(undefined, undefined, { width: 1920, height: 1080, fps: 30 })
 engine.configureResourceNamespace('aoles-gl-vue-demo')
-engine.configure({ jsPath: controllerJs, wasmPath: controllerWasm })
+engine.configure({ jsPath: controllerJs, wasmPath: controllerWasm, backend: 'webgpu' })
 engine.configAssetPath({
   basePath: import.meta.env.BASE_URL,
   glslUrlResolver: resolveGlslUrl,
@@ -61,6 +61,7 @@ const ASSET_PRELOAD_LIST = [
 ].filter((asset): asset is { url: string; wasmPath: string } => Boolean(asset.url))
 
 engine.onWasmReady(async () => {
+  console.info(`[aoles-gl] backend=${engine.getBackend()}`)
   for (const asset of ASSET_PRELOAD_LIST) {
     try {
       const res = await fetch(asset.url)
